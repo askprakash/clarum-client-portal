@@ -1,6 +1,8 @@
 import { useState, type ChangeEvent, type DragEvent, type FormEvent } from 'react'
+import { portalService } from '../services/portalService'
+import type { DocumentCategory } from '../types'
 
-const uploadCategories = [
+const uploadCategories: Array<DocumentCategory | 'Other'> = [
   'Tax Returns',
   'Organizers',
   'Financial Statements',
@@ -15,11 +17,13 @@ type SelectedFile = {
 }
 
 export function UploadPage() {
-  const [category, setCategory] = useState(uploadCategories[0])
+  const [category, setCategory] = useState<(typeof uploadCategories)[number]>('Correspondence')
   const [notes, setNotes] = useState('')
   const [files, setFiles] = useState<SelectedFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   function addFiles(fileList: FileList | File[]) {
     const incoming = Array.from(fileList).map((file) => ({
@@ -32,6 +36,7 @@ export function UploadPage() {
       return [...current, ...incoming.filter((item) => !existing.has(item.id))]
     })
     setSubmitted(false)
+    setError('')
   }
 
   function onInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -53,14 +58,23 @@ export function UploadPage() {
     setFiles((current) => current.filter((item) => item.id !== id))
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (files.length === 0) {
-      return
+    if (files.length === 0) return
+    setBusy(true)
+    setError('')
+    try {
+      for (const item of files) {
+        await portalService.uploadDocument(item.file, category)
+      }
+      setSubmitted(true)
+      setFiles([])
+      setNotes('')
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Upload failed. Please try again.')
+    } finally {
+      setBusy(false)
     }
-    setSubmitted(true)
-    setFiles([])
-    setNotes('')
   }
 
   return (
@@ -70,24 +84,24 @@ export function UploadPage() {
           <p className="eyebrow">Secure transfer</p>
           <h1>Upload documents</h1>
           <p className="lede">
-            Send supporting files to your CLARUM engagement team. Uploads remain
-            on this device until Azure and SharePoint are connected.
+            Send supporting files to your CLARUM engagement team. Files are stored
+            only after the portal verifies your sign-in.
           </p>
         </div>
       </div>
 
       {submitted && (
         <div className="banner" role="status">
-          Files were recorded locally. They will be stored in SharePoint after the
-          Microsoft Graph connection is in place.
+          Files were uploaded to your PRC Analytics document library.
         </div>
       )}
+      {error && <p role="alert">{error}</p>}
 
       <article className="card card--narrow">
-        <form className="upload-form" onSubmit={onSubmit}>
+        <form className="upload-form" onSubmit={(event) => void onSubmit(event)}>
           <label className="field">
             <span>Category</span>
-            <select value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>
               {uploadCategories.map((item) => (
                 <option key={item} value={item}>
                   {item}
@@ -137,8 +151,8 @@ export function UploadPage() {
           )}
 
           <div className="form-actions">
-            <button type="submit" className="btn btn--primary" disabled={files.length === 0}>
-              Submit files
+            <button type="submit" className="btn btn--primary" disabled={files.length === 0 || busy}>
+              {busy ? 'Uploading…' : 'Submit files'}
             </button>
           </div>
         </form>

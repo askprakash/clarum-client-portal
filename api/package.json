@@ -1,0 +1,15 @@
+{
+  "name": "clarum-client-portal-api",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.7.2",
+    "@azure/storage-blob": "^12.28.0",
+    "jose": "^6.0.11"
+  }
+}

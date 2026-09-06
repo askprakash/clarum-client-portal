@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { auth, isClientAccount } from './auth'
+import { auth, isClientAccount, loginScopes } from './auth'
 import { AppLayout } from './layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { UploadPage } from './pages/UploadPage'
 import { portalService } from './services/portalService'
 import type { AppView } from './types'
 
@@ -19,7 +20,7 @@ function App() {
       <p>{account ? 'This account is not assigned to the PRC Analytics portal.' : 'Sign in with your client email and password.'}</p>
       {error && <p role="alert">{error}</p>}
       <button className="btn btn--primary" onClick={() => {
-        const action = account ? auth.logoutRedirect() : auth.loginRedirect({ scopes: ['openid', 'profile', 'email'], prompt: 'login' })
+        const action = account ? auth.logoutRedirect() : auth.loginRedirect({ scopes: loginScopes, prompt: 'login' })
         void action.catch(() => setError('Sign-in could not start. Please try again.'))
       }}>{account ? 'Sign out' : 'Sign in'}</button>
     </article></main>
@@ -47,7 +48,7 @@ function App() {
       >
         {view === 'dashboard' && <DashboardPage onNavigate={handleNavigate} />}
         {view === 'documents' && <DocumentsPage />}
-        {view === 'upload' && <section className="page"><h1>Upload documents</h1><p>Document storage is not connected yet. Uploads will be available after setup is complete.</p></section>}
+        {view === 'upload' && <UploadPage />}
         {view === 'profile' && <ProfilePage />}
       </AppLayout>
 

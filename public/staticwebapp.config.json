@@ -1,5 +1,6 @@
 {
-  "navigationFallback": { "rewrite": "/index.html", "exclude": ["/assets/*"] },
+  "platform": { "apiRuntime": "node:20" },
+  "navigationFallback": { "rewrite": "/index.html", "exclude": ["/assets/*", "/api/*"] },
   "globalHeaders": {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",

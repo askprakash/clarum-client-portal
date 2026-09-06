@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { DocumentTable } from '../components/DocumentTable'
 import { portalService } from '../services/portalService'
-import type { AppView } from '../types'
+import type { AppView, ClientDocument } from '../types'
 import { formatDate } from '../utils/format'
 
 type DashboardPageProps = {
@@ -10,16 +11,36 @@ type DashboardPageProps = {
 
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const client = portalService.getCurrentClient()
-  const recentDocuments = portalService.listRecentDocuments(4)
-  const attentionDocuments = portalService.listDocumentsNeedingAttention()
+  const [recentDocuments, setRecentDocuments] = useState<ClientDocument[]>([])
+  const [attentionDocuments, setAttentionDocuments] = useState<ClientDocument[]>([])
+  const [error, setError] = useState('')
   const activity = portalService.listActivity()
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      portalService.listRecentDocuments(4),
+      portalService.listDocumentsNeedingAttention(),
+    ])
+      .then(([recent, attention]) => {
+        if (cancelled) return
+        setRecentDocuments(recent)
+        setAttentionDocuments(attention)
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : 'Documents could not be loaded.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <section className="page">
       <div className="welcome">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h1>Welcome, {client.fullName.split(' ')[0]}</h1>
+          <h1>Welcome, {client.organization}</h1>
           <p className="lede">
             Review recent files, complete items that need your attention, and send
             documents to CLARUM when you are ready.
@@ -29,6 +50,8 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           Quick Upload
         </button>
       </div>
+
+      {error && <p role="alert">{error}</p>}
 
       <div className="dashboard-grid">
         <article className="card card--span-2">

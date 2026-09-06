@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { DocumentTable } from '../components/DocumentTable'
 import { portalService } from '../services/portalService'
-import type { DocumentCategory } from '../types'
+import type { ClientDocument, DocumentCategory } from '../types'
 
 const categories: Array<DocumentCategory | 'All'> = [
   'All',
@@ -15,7 +15,27 @@ const categories: Array<DocumentCategory | 'All'> = [
 
 export function DocumentsPage() {
   const [category, setCategory] = useState<(typeof categories)[number]>('All')
-  const documents = portalService.listDocuments()
+  const [documents, setDocuments] = useState<ClientDocument[]>([])
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    portalService
+      .listDocuments()
+      .then((items) => {
+        if (!cancelled) setDocuments(items)
+      })
+      .catch((reason: unknown) => {
+        if (!cancelled) setError(reason instanceof Error ? reason.message : 'Documents could not be loaded.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const filtered = useMemo(
     () => (category === 'All' ? documents : documents.filter((doc) => doc.category === category)),
@@ -29,11 +49,13 @@ export function DocumentsPage() {
           <p className="eyebrow">Files</p>
           <h1>Documents</h1>
           <p className="lede">
-            View and download files prepared for Northline Manufacturing. Sample
-            records are shown until SharePoint is connected.
+            View and download files prepared for PRC ANALYTICS INC. Uploads are stored
+            for your account after server-side authorization.
           </p>
         </div>
       </div>
+
+      {error && <p role="alert">{error}</p>}
 
       <article className="card">
         <div className="card__header card__header--wrap">
@@ -49,7 +71,11 @@ export function DocumentsPage() {
             </select>
           </label>
         </div>
-        <DocumentTable documents={filtered} emptyMessage="No documents in this category." />
+        {loading ? (
+          <p className="empty-state">Loading documents…</p>
+        ) : (
+          <DocumentTable documents={filtered} emptyMessage="No documents in this category." />
+        )}
       </article>
     </section>
   )
