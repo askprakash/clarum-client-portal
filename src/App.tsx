@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { auth, isClientAccount, loginScopes } from './auth'
+import { SignInPage } from './pages/SignInPage'
 import { AppLayout } from './layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { DocumentsPage } from './pages/DocumentsPage'
@@ -14,16 +15,24 @@ function App() {
   const [error, setError] = useState('')
   const account = auth.getActiveAccount()
   if (!account || !isClientAccount()) {
-    return <main className="page"><article className="card card--narrow">
-      <p className="eyebrow">CLARUM Client Portal</p>
-      <h1>{account ? 'Account not assigned' : 'Welcome to CLARUM'}</h1>
-      <p>{account ? 'This account is not assigned to the PRC Analytics portal.' : 'Sign in with your client email and password.'}</p>
-      {error && <p role="alert">{error}</p>}
-      <button className="btn btn--primary" onClick={() => {
-        const action = account ? auth.logoutRedirect() : auth.loginRedirect({ scopes: loginScopes, prompt: 'login' })
-        void action.catch(() => setError('Sign-in could not start. Please try again.'))
-      }}>{account ? 'Sign out' : 'Sign in'}</button>
-    </article></main>
+    return (
+      <SignInPage
+        title={account ? 'Account not assigned' : 'Please sign in'}
+        message={
+          account
+            ? 'This account is not assigned to the PRC Analytics portal.'
+            : 'Use your CLARUM client Microsoft account to continue.'
+        }
+        actionLabel={account ? 'Sign out' : 'Sign in'}
+        error={error}
+        onAction={() => {
+          const action = account
+            ? auth.logoutRedirect()
+            : auth.loginRedirect({ scopes: loginScopes, prompt: 'login' })
+          void action.catch(() => setError('Sign-in could not start. Please try again.'))
+        }}
+      />
+    )
   }
   const client = portalService.getCurrentClient()
 
