@@ -2,6 +2,8 @@ export const tenantId = 'd13486fb-c6cb-40ad-9587-8d71585c135b'
 export const clientId = '728b382c-e6b6-4b99-bd67-8e24bc45d352'
 export const apiAudience = `api://${clientId}`
 
+export const allowedAdminEmails = ['prakash@clarumcpa.com']
+
 export const allowedClients = {
   'e7468903-52b6-4e96-97ca-239c0ec6188a': {
     id: 'e7468903-52b6-4e96-97ca-239c0ec6188a',
@@ -19,4 +21,26 @@ export const allowedClients = {
 
 export function getAllowedClient(oid) {
   return allowedClients[oid] ?? null
+}
+
+export function listAllowedClients() {
+  return Object.values(allowedClients)
+}
+
+export function emailsFromPayload(payload) {
+  const values = []
+  if (typeof payload.preferred_username === 'string') values.push(payload.preferred_username)
+  if (typeof payload.email === 'string') values.push(payload.email)
+  if (typeof payload.upn === 'string') values.push(payload.upn)
+  if (Array.isArray(payload.emails)) {
+    for (const email of payload.emails) {
+      if (typeof email === 'string') values.push(email)
+    }
+  }
+  return values.map((email) => email.trim().toLowerCase()).filter(Boolean)
+}
+
+export function isAdminPayload(payload) {
+  const emails = emailsFromPayload(payload)
+  return allowedAdminEmails.some((email) => emails.includes(email))
 }

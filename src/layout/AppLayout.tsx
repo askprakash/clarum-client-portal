@@ -1,11 +1,13 @@
-import type { ReactNode } from 'react'
-import type { AppView, ClientProfile } from '../types'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
+import type { AppView, ClientProfile } from '../types'
+import type { ReactNode } from 'react'
 
 type AppLayoutProps = {
   currentView: AppView
   client: ClientProfile
+  isAdmin?: boolean
+  clientOpen?: boolean
   mobileNavOpen: boolean
   onNavigate: (view: AppView) => void
   onToggleMobileNav: () => void
@@ -17,6 +19,8 @@ type AppLayoutProps = {
 export function AppLayout({
   currentView,
   client,
+  isAdmin = false,
+  clientOpen = false,
   mobileNavOpen,
   onNavigate,
   onToggleMobileNav,
@@ -28,6 +32,7 @@ export function AppLayout({
     <div className="app-shell">
       <TopBar
         client={client}
+        isAdmin={isAdmin}
         mobileNavOpen={mobileNavOpen}
         onToggleMobileNav={onToggleMobileNav}
       />
@@ -42,6 +47,8 @@ export function AppLayout({
       <div className="app-body">
         <Sidebar
           currentView={currentView}
+          isAdmin={isAdmin}
+          clientOpen={clientOpen}
           onNavigate={onNavigate}
           onSignOut={onSignOut}
           mobileOpen={mobileNavOpen}

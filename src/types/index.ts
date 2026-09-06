@@ -1,4 +1,4 @@
-export type AppView = 'dashboard' | 'documents' | 'upload' | 'profile'
+export type AppView = 'clients' | 'dashboard' | 'documents' | 'upload' | 'profile'
 
 export type DocumentCategory =
   | 'Tax Returns'

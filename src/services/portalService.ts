@@ -1,4 +1,4 @@
-import { getApiToken, isClientAccount, clientUserId } from '../auth'
+import { getApiToken, isAdminAccount, isClientAccount, clientUserId } from '../auth'
 import type { ActivityItem, ClientDocument, ClientProfile, DocumentCategory } from '../types'
 
 const fallbackClient: ClientProfile = {
@@ -12,6 +12,17 @@ const fallbackClient: ClientProfile = {
   clientSince: 'Not provided',
   engagements: [],
   preferredContact: 'Email',
+}
+
+const actingClientKey = 'clarum-acting-client'
+
+let actingClientId: string | null = sessionStorage.getItem(actingClientKey)
+let cachedClients: ClientProfile[] = []
+
+function setActingClientId(id: string | null) {
+  actingClientId = id
+  if (id) sessionStorage.setItem(actingClientKey, id)
+  else sessionStorage.removeItem(actingClientKey)
 }
 
 async function authorizedFetch(path: string, init: RequestInit = {}) {
@@ -32,14 +43,44 @@ async function authorizedFetch(path: string, init: RequestInit = {}) {
   return response
 }
 
+function documentsPath(params: Record<string, string> = {}) {
+  const search = new URLSearchParams(params)
+  if (isAdminAccount()) {
+    if (!actingClientId) throw new Error('Choose a client')
+    search.set('clientId', actingClientId)
+  }
+  const query = search.toString()
+  return query ? `/api/documents?${query}` : '/api/documents'
+}
+
 export const portalService = {
+  getActingClientId() {
+    return actingClientId
+  },
+
+  setActingClient(id: string | null) {
+    setActingClientId(id)
+  },
+
   getCurrentClient(): ClientProfile {
-    if (!isClientAccount()) throw new Error('Client sign-in required')
-    return fallbackClient
+    if (isClientAccount()) return fallbackClient
+    if (isAdminAccount()) {
+      const selected = cachedClients.find((client) => client.id === actingClientId)
+      if (selected) return selected
+      throw new Error('Choose a client')
+    }
+    throw new Error('Client sign-in required')
+  },
+
+  async listClients(): Promise<ClientProfile[]> {
+    const response = await authorizedFetch('/api/clients')
+    const body = (await response.json()) as { clients: ClientProfile[] }
+    cachedClients = body.clients
+    return cachedClients
   },
 
   async listDocuments(): Promise<ClientDocument[]> {
-    const response = await authorizedFetch('/api/documents')
+    const response = await authorizedFetch(documentsPath())
     const body = (await response.json()) as { documents: ClientDocument[] }
     return [...body.documents].sort((a, b) => b.date.localeCompare(a.date))
   },
@@ -60,16 +101,15 @@ export const portalService = {
     const data = new FormData()
     data.set('file', file)
     data.set('category', category)
-    const response = await authorizedFetch('/api/documents', { method: 'POST', body: data })
+    const response = await authorizedFetch(documentsPath(), { method: 'POST', body: data })
     return (await response.json()) as { document: ClientDocument }
   },
 
   async openDocument(document: ClientDocument, download = false) {
     const token = await getApiToken()
-    const response = await fetch(
-      `/api/documents?id=${encodeURIComponent(document.id)}${download ? '&download=1' : ''}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    )
+    const response = await fetch(documentsPath({ id: document.id, ...(download ? { download: '1' } : {}) }), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
     if (!response.ok) throw new Error('The document could not be opened.')
     const blob = await response.blob()
     const url = URL.createObjectURL(blob)

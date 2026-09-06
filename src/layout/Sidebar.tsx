@@ -5,7 +5,7 @@ type NavItem = {
   label: string
 }
 
-const navItems: NavItem[] = [
+const clientNavItems: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'documents', label: 'Documents' },
   { id: 'upload', label: 'Upload Documents' },
@@ -14,6 +14,8 @@ const navItems: NavItem[] = [
 
 type SidebarProps = {
   currentView: AppView
+  isAdmin?: boolean
+  clientOpen?: boolean
   onNavigate: (view: AppView) => void
   onSignOut: () => void
   mobileOpen: boolean
@@ -22,11 +24,17 @@ type SidebarProps = {
 
 export function Sidebar({
   currentView,
+  isAdmin = false,
+  clientOpen = false,
   onNavigate,
   onSignOut,
   mobileOpen,
   onCloseMobile,
 }: SidebarProps) {
+  const navItems: NavItem[] = isAdmin
+    ? [{ id: 'clients', label: 'Clients' }, ...(clientOpen ? clientNavItems : [])]
+    : clientNavItems
+
   function handleNavigate(view: AppView) {
     onNavigate(view)
     onCloseMobile()
