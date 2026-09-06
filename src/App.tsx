@@ -21,7 +21,7 @@ function App() {
         message={
           account
             ? 'This account is not assigned to the PRC Analytics portal.'
-            : 'Use your CLARUM client Microsoft account to continue.'
+            : 'to access your secure client portal'
         }
         actionLabel={account ? 'Sign out' : 'Sign in'}
         error={error}

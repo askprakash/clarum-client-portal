@@ -730,122 +730,122 @@ p {
 }
 
 body:has(.auth-screen) {
-  background: #08244a;
+  background: #0a111a;
 }
 
 .auth-screen {
   min-height: 100svh;
+  height: 100svh;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  grid-template-columns: 1fr 1fr;
+  color: #fff;
+  background: #0a111a;
+}
+
+.auth-screen__visual {
+  display: flex;
   align-items: center;
-  gap: 64px;
-  padding: 48px 9vw;
-  position: relative;
+  justify-content: center;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
-  color: #fff;
-  background:
-    linear-gradient(118deg, rgba(6, 22, 52, 0.72) 0%, rgba(10, 54, 110, 0.58) 46%, rgba(7, 32, 68, 0.78) 100%),
-    radial-gradient(circle at 28% 48%, rgba(70, 160, 230, 0.35), transparent 32%),
-    #08244a;
+  background: #0a111a;
 }
 
-.auth-screen__scene {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.auth-screen__rays {
-  position: absolute;
-  left: 30%;
-  top: 50%;
-  width: 1600px;
-  height: 1600px;
-  transform: translate(-50%, -50%);
-  background: repeating-conic-gradient(
-    from -18deg,
-    transparent 0deg 10deg,
-    rgba(130, 220, 255, 0.16) 10deg 11.4deg
-  );
-  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0.9) 0%, transparent 58%);
-}
-
-.auth-screen__vault {
-  position: absolute;
-  left: 30%;
-  top: 50%;
-  width: 540px;
-  height: 540px;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(180, 220, 245, 0.18) 0 16%, transparent 17%),
-    repeating-radial-gradient(
-      circle at 50% 50%,
-      rgba(150, 200, 230, 0.22) 0 10px,
-      transparent 10px 42px
-    );
-  box-shadow:
-    inset 0 0 0 16px rgba(170, 215, 240, 0.22),
-    inset 0 0 80px rgba(90, 170, 230, 0.2),
-    0 0 140px rgba(70, 170, 255, 0.28);
-}
-
-.auth-screen__copy,
-.auth-card {
+.auth-screen__hero {
   position: relative;
-  z-index: 1;
+  margin: 0;
+  width: min(100%, 100%);
+  max-height: 100%;
+  aspect-ratio: 1 / 1;
 }
 
-.auth-screen__hello {
-  margin: 0 0 12px;
-  font-size: clamp(2.4rem, 4.4vw, 3.6rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
+.auth-screen__hero img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
 }
 
-.auth-screen__copy h1 {
-  color: #fff;
-  font-size: 1.28rem;
-  font-weight: 400;
-  letter-spacing: 0;
+.auth-screen__assurance {
+  position: absolute;
+  left: 50%;
+  top: 88%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  width: 90%;
+  color: rgba(255, 255, 255, 0.94);
+  font-family: var(--serif);
+  font-size: clamp(0.92rem, 1.5vw, 1.15rem);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.auth-screen__panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  height: 100%;
+  padding: 32px 0;
+  background: #0a111a;
 }
 
 .auth-card {
+  display: flex;
+  flex-direction: column;
+  width: 75%;
+  height: 75%;
+  min-height: 420px;
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 22px 60px rgba(4, 16, 38, 0.38);
+  border-radius: 12px;
+  box-shadow: 0 22px 60px rgba(4, 16, 38, 0.45);
   overflow: hidden;
-  width: min(100%, 400px);
-  justify-self: end;
 }
 
 .auth-card__brand {
   background: #0b1c3a;
   display: flex;
+  align-items: center;
   justify-content: center;
-  padding: 20px 24px 16px;
+  flex: 1;
+  padding: 36px 40px 28px;
   border-bottom: 3px solid #9a3d3d;
 }
 
+.auth-card__brand .brand {
+  width: 100%;
+  justify-content: center;
+}
+
 .auth-card__brand .brand__logo {
-  height: 76px;
+  height: auto;
+  width: 100%;
   max-width: 100%;
+  max-height: 160px;
+  object-fit: contain;
   object-position: center;
 }
 
 .auth-card__body {
-  padding: 28px 32px 22px;
+  padding: 36px 40px 32px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
-.auth-card__body h2 {
-  font-size: 1.4rem;
+.auth-card__body h1 {
+  font-size: 1.6rem;
   color: #1a1a1a;
   font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .auth-card__body p {
@@ -860,12 +860,12 @@ body:has(.auth-screen) {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
 .btn--signin {
-  min-height: 40px;
-  padding: 0 22px;
+  min-height: 44px;
+  padding: 0 28px;
   border-radius: 6px;
   background: #2f6feb;
   color: #fff;
@@ -877,69 +877,54 @@ body:has(.auth-screen) {
   background: #245cd1;
 }
 
-.auth-card__divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #8a93a0;
-  font-size: 0.82rem;
-  margin: 4px 0;
-}
-
-.auth-card__divider::before,
-.auth-card__divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #e4e7ec;
-}
-
-.btn--microsoft {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 42px;
-  border: 1px solid #d5dbe3;
-  border-radius: 6px;
-  background: #fff;
-  color: #3c4043;
-  font-weight: 600;
-}
-
-.btn--microsoft:hover {
-  background: #f6f8fb;
-  border-color: #c5ccd6;
-}
-
-.auth-card__help {
-  text-align: center;
-  margin-top: 10px;
-}
-
-.auth-card__help a {
-  color: #2f6feb;
-  text-decoration: none;
-  font-size: 0.92rem;
-}
-
-.auth-card__help a:hover {
-  text-decoration: underline;
-}
-
 @media (max-width: 900px) {
   .auth-screen {
+    height: auto;
+    min-height: 100svh;
     grid-template-columns: 1fr;
-    justify-items: center;
-    padding: 32px 20px 48px;
-    gap: 28px;
+    grid-template-rows: auto auto;
   }
 
-  .auth-screen__copy {
-    text-align: center;
+  .auth-screen__visual,
+  .auth-screen__panel {
+    height: auto;
+    min-height: 0;
+  }
+
+  .auth-screen__visual {
+    padding: 12px 12px 0;
+  }
+
+  .auth-screen__hero {
+    width: min(100%, 420px);
+    max-height: 46vh;
+  }
+
+  .auth-screen__assurance {
+    font-size: 0.82rem;
+    gap: 8px;
+  }
+
+  .auth-screen__panel {
+    padding: 24px 0 40px;
   }
 
   .auth-card {
-    justify-self: center;
+    width: 75%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .auth-card__brand {
+    flex: 0 0 auto;
+    padding: 24px 28px 18px;
+  }
+
+  .auth-card__brand .brand__logo {
+    max-height: 96px;
+  }
+
+  .auth-card__body {
+    padding: 24px 28px 28px;
   }
 }
