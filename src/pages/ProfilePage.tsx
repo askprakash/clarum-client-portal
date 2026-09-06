@@ -10,8 +10,7 @@ export function ProfilePage() {
           <p className="eyebrow">Account</p>
           <h1>Profile</h1>
           <p className="lede">
-            Contact details used by your CLARUM team. Profile updates will be
-            available after Microsoft Entra External ID is connected.
+            Contact details used by your CLARUM team. Contact CLARUM to update your profile details.
           </p>
         </div>
       </div>

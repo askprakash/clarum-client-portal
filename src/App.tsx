@@ -1,17 +1,29 @@
 import { useState } from 'react'
-import { Modal } from './components/Modal'
+import { auth, isClientAccount } from './auth'
 import { AppLayout } from './layout/AppLayout'
 import { DashboardPage } from './pages/DashboardPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { ProfilePage } from './pages/ProfilePage'
-import { UploadPage } from './pages/UploadPage'
 import { portalService } from './services/portalService'
 import type { AppView } from './types'
 
 function App() {
   const [view, setView] = useState<AppView>('dashboard')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [signOutOpen, setSignOutOpen] = useState(false)
+  const [error, setError] = useState('')
+  const account = auth.getActiveAccount()
+  if (!account || !isClientAccount()) {
+    return <main className="page"><article className="card card--narrow">
+      <p className="eyebrow">CLARUM Client Portal</p>
+      <h1>{account ? 'Account not assigned' : 'Welcome to CLARUM'}</h1>
+      <p>{account ? 'This account is not assigned to the PRC Analytics portal.' : 'Sign in with your client email and password.'}</p>
+      {error && <p role="alert">{error}</p>}
+      <button className="btn btn--primary" onClick={() => {
+        const action = account ? auth.logoutRedirect() : auth.loginRedirect({ scopes: ['openid', 'profile', 'email'], prompt: 'login' })
+        void action.catch(() => setError('Sign-in could not start. Please try again.'))
+      }}>{account ? 'Sign out' : 'Sign in'}</button>
+    </article></main>
+  }
   const client = portalService.getCurrentClient()
 
   function handleNavigate(nextView: AppView) {
@@ -30,28 +42,16 @@ function App() {
         onCloseMobileNav={() => setMobileNavOpen(false)}
         onSignOut={() => {
           setMobileNavOpen(false)
-          setSignOutOpen(true)
+          void auth.logoutRedirect().catch(() => setError('Sign-out failed. Please try again.'))
         }}
       >
         {view === 'dashboard' && <DashboardPage onNavigate={handleNavigate} />}
         {view === 'documents' && <DocumentsPage />}
-        {view === 'upload' && <UploadPage />}
+        {view === 'upload' && <section className="page"><h1>Upload documents</h1><p>Document storage is not connected yet. Uploads will be available after setup is complete.</p></section>}
         {view === 'profile' && <ProfilePage />}
       </AppLayout>
 
-      {signOutOpen && (
-        <Modal title="Sign out" onClose={() => setSignOutOpen(false)}>
-          <p>
-            Sign-in is not connected yet. Microsoft Entra External ID will handle
-            authentication in a later phase.
-          </p>
-          <div className="modal__footer">
-            <button type="button" className="btn btn--primary" onClick={() => setSignOutOpen(false)}>
-              Close
-            </button>
-          </div>
-        </Modal>
-      )}
+      {error && <p role="alert">{error}</p>}
     </>
   )
 }

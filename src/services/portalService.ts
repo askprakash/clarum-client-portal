@@ -1,4 +1,6 @@
-import { activities, currentClient, documents } from '../data/mockData'
+import { isClientAccount, clientUserId } from '../auth'
+const documents: ClientDocument[] = []
+const activities: ActivityItem[] = []
 import type { ActivityItem, ClientDocument, ClientProfile } from '../types'
 
 /**
@@ -10,7 +12,8 @@ import type { ActivityItem, ClientDocument, ClientProfile } from '../types'
  */
 export const portalService = {
   getCurrentClient(): ClientProfile {
-    return currentClient
+    if (!isClientAccount()) throw new Error('Client sign-in required')
+    return { id: clientUserId, fullName: 'PRC ANALYTICS INC', title: 'Client', organization: 'PRC ANALYTICS INC', email: 'prakash@prcanalytics.com', phone: 'Not provided', mailingAddress: 'Not provided', clientSince: 'Not provided', engagements: [], preferredContact: 'Email' }
   },
 
   listDocuments(): ClientDocument[] {
