@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { auth, isAdminAccount, isPortalAccount, loginScopes } from './auth'
 import { SignInPage } from './pages/SignInPage'
 import { AppLayout } from './layout/AppLayout'
@@ -35,11 +35,11 @@ function ClientWorkspace({
 }: {
   client: ClientProfile
   isAdmin: boolean
-  view: AppView
+  view: Exclude<AppView, 'clients'>
   mobileNavOpen: boolean
   error: string
   onNavigate: (view: AppView) => void
-  setMobileNavOpen: (update: (open: boolean) => boolean) => void
+  setMobileNavOpen: Dispatch<SetStateAction<boolean>>
   onSignOut: () => void
 }) {
   return (
@@ -164,7 +164,7 @@ function AdminPortal({
     <ClientWorkspace
       client={selected}
       isAdmin
-      view={view === 'clients' ? 'dashboard' : view}
+      view={view}
       mobileNavOpen={mobileNavOpen}
       error={error}
       onNavigate={handleNavigate}
