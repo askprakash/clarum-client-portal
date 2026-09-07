@@ -17,6 +17,7 @@ type SelectedFile = {
 }
 
 export function UploadPage() {
+  const client = portalService.getCurrentClient()
   const [category, setCategory] = useState<(typeof uploadCategories)[number]>('Correspondence')
   const [notes, setNotes] = useState('')
   const [files, setFiles] = useState<SelectedFile[]>([])
@@ -92,7 +93,7 @@ export function UploadPage() {
 
       {submitted && (
         <div className="banner" role="status">
-          Files were uploaded to your PRC Analytics document library.
+          Files were uploaded to your {client.organization} document library.
         </div>
       )}
       {error && <p role="alert">{error}</p>}

@@ -1,4 +1,4 @@
-export type AppView = 'clients' | 'dashboard' | 'documents' | 'upload' | 'profile'
+export type AppView = 'clients' | 'staff' | 'dashboard' | 'documents' | 'upload' | 'profile'
 
 export type DocumentCategory =
   | 'Tax Returns'
@@ -23,6 +23,33 @@ export interface ClientProfile {
   clientSince: string
   engagements: string[]
   preferredContact: 'Email' | 'Phone'
+  status?: 'active' | 'disabled'
+}
+
+export interface StaffMember {
+  id: string
+  displayName: string
+  email: string
+  status: 'active' | 'disabled'
+}
+
+export interface NewClientInput {
+  organization: string
+  fullName: string
+  email: string
+  phone?: string
+  mailingAddress?: string
+  preferredContact: 'Email' | 'Phone'
+}
+
+export interface NewStaffInput {
+  displayName: string
+  email: string
+}
+
+export interface ProvisionedAccount {
+  email: string
+  temporaryPassword: string
 }
 
 export interface ClientDocument {

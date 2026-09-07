@@ -14,6 +14,7 @@ const categories: Array<DocumentCategory | 'All'> = [
 ]
 
 export function DocumentsPage() {
+  const client = portalService.getCurrentClient()
   const [category, setCategory] = useState<(typeof categories)[number]>('All')
   const [documents, setDocuments] = useState<ClientDocument[]>([])
   const [error, setError] = useState('')
@@ -49,7 +50,7 @@ export function DocumentsPage() {
           <p className="eyebrow">Files</p>
           <h1>Documents</h1>
           <p className="lede">
-            View and download files prepared for PRC ANALYTICS INC. Uploads are stored
+            View and download files prepared for {client.organization}. Uploads are stored
             for your account after server-side authorization.
           </p>
         </div>

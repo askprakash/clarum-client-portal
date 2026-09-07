@@ -6,6 +6,7 @@ import { ClientsPage } from './pages/ClientsPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { DocumentsPage } from './pages/DocumentsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { StaffPage } from './pages/StaffPage'
 import { UploadPage } from './pages/UploadPage'
 import { portalService } from './services/portalService'
 import type { AppView, ClientProfile } from './types'
@@ -107,7 +108,7 @@ function AdminPortal({
   const selected = clients.find((client) => client.id === actingId) ?? null
 
   function handleNavigate(nextView: AppView) {
-    if (nextView === 'clients') {
+    if (nextView === 'clients' || nextView === 'staff') {
       portalService.setActingClient(null)
       setActingId(null)
     }
@@ -134,11 +135,11 @@ function AdminPortal({
     )
   }
 
-  if (!selected || view === 'clients') {
+  if (!selected || view === 'clients' || view === 'staff') {
     return (
       <>
         <AppLayout
-          currentView="clients"
+          currentView={view === 'staff' ? 'staff' : 'clients'}
           client={firmProfile}
           isAdmin
           mobileNavOpen={mobileNavOpen}
@@ -147,13 +148,17 @@ function AdminPortal({
           onCloseMobileNav={() => setMobileNavOpen(false)}
           onSignOut={onSignOut}
         >
-          <ClientsPage
-            onOpenClient={(client) => {
-              portalService.setActingClient(client.id)
-              setActingId(client.id)
-              setView('dashboard')
-            }}
-          />
+          {view === 'staff' ? (
+            <StaffPage />
+          ) : (
+            <ClientsPage
+              onOpenClient={(client) => {
+                portalService.setActingClient(client.id)
+                setActingId(client.id)
+                setView('dashboard')
+              }}
+            />
+          )}
         </AppLayout>
         {error && <p role="alert">{error}</p>}
       </>

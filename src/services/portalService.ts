@@ -1,5 +1,14 @@
 import { getApiToken, isAdminAccount, isClientAccount, clientUserId } from '../auth'
-import type { ActivityItem, ClientDocument, ClientProfile, DocumentCategory } from '../types'
+import type {
+  ActivityItem,
+  ClientDocument,
+  ClientProfile,
+  DocumentCategory,
+  NewClientInput,
+  NewStaffInput,
+  ProvisionedAccount,
+  StaffMember,
+} from '../types'
 
 const fallbackClient: ClientProfile = {
   id: clientUserId,
@@ -43,6 +52,15 @@ async function authorizedFetch(path: string, init: RequestInit = {}) {
   return response
 }
 
+async function authorizedJsonFetch<T>(path: string, method: string, body?: unknown): Promise<T> {
+  const response = await authorizedFetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  return (await response.json()) as T
+}
+
 function documentsPath(params: Record<string, string> = {}) {
   const search = new URLSearchParams(params)
   if (isAdminAccount()) {
@@ -77,6 +95,29 @@ export const portalService = {
     const body = (await response.json()) as { clients: ClientProfile[] }
     cachedClients = body.clients
     return cachedClients
+  },
+
+  async createClient(input: NewClientInput): Promise<ProvisionedAccount> {
+    const body = await authorizedJsonFetch<{ temporaryPassword: string }>('/api/admin/clients', 'POST', input)
+    return { email: input.email, temporaryPassword: body.temporaryPassword }
+  },
+
+  async setClientStatus(oid: string, status: 'active' | 'disabled'): Promise<void> {
+    await authorizedJsonFetch('/api/admin/clients/' + encodeURIComponent(oid), 'PATCH', { status })
+  },
+
+  async listStaff(): Promise<StaffMember[]> {
+    const body = await authorizedJsonFetch<{ staff: StaffMember[] }>('/api/admin/staff', 'GET')
+    return body.staff
+  },
+
+  async createStaff(input: NewStaffInput): Promise<ProvisionedAccount> {
+    const body = await authorizedJsonFetch<{ temporaryPassword: string }>('/api/admin/staff', 'POST', input)
+    return { email: input.email, temporaryPassword: body.temporaryPassword }
+  },
+
+  async setStaffStatus(oid: string, status: 'active' | 'disabled'): Promise<void> {
+    await authorizedJsonFetch('/api/admin/staff/' + encodeURIComponent(oid), 'PATCH', { status })
   },
 
   async listDocuments(): Promise<ClientDocument[]> {

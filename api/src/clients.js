@@ -1,46 +1,74 @@
-export const tenantId = 'd13486fb-c6cb-40ad-9587-8d71585c135b'
-export const clientId = '728b382c-e6b6-4b99-bd67-8e24bc45d352'
-export const apiAudience = `api://${clientId}`
+import { query } from './db.js'
+import { createLocalAccount, setAccountEnabled } from './graph.js'
 
-export const allowedAdminEmails = ['prakash@clarumcpa.com']
-
-export const allowedClients = {
-  'e7468903-52b6-4e96-97ca-239c0ec6188a': {
-    id: 'e7468903-52b6-4e96-97ca-239c0ec6188a',
-    fullName: 'PRC ANALYTICS INC',
-    title: 'Client',
-    organization: 'PRC ANALYTICS INC',
-    email: 'prakash@prcanalytics.com',
-    phone: 'Not provided',
-    mailingAddress: 'Not provided',
-    clientSince: 'Not provided',
-    engagements: [],
-    preferredContact: 'Email',
-  },
-}
-
-export function getAllowedClient(oid) {
-  return allowedClients[oid] ?? null
-}
-
-export function listAllowedClients() {
-  return Object.values(allowedClients)
-}
-
-export function emailsFromPayload(payload) {
-  const values = []
-  if (typeof payload.preferred_username === 'string') values.push(payload.preferred_username)
-  if (typeof payload.email === 'string') values.push(payload.email)
-  if (typeof payload.upn === 'string') values.push(payload.upn)
-  if (Array.isArray(payload.emails)) {
-    for (const email of payload.emails) {
-      if (typeof email === 'string') values.push(email)
-    }
+function mapRow(row) {
+  return {
+    id: row.oid,
+    fullName: row.full_name,
+    title: row.title,
+    organization: row.organization,
+    email: row.email,
+    phone: row.phone,
+    mailingAddress: row.mailing_address,
+    clientSince: row.client_since,
+    engagements: JSON.parse(row.engagements || '[]'),
+    preferredContact: row.preferred_contact,
+    status: row.status,
   }
-  return values.map((email) => email.trim().toLowerCase()).filter(Boolean)
 }
 
-export function isAdminPayload(payload) {
-  const emails = emailsFromPayload(payload)
-  return allowedAdminEmails.some((email) => emails.includes(email))
+// Used by auth: only ever returns a client that is allowed to sign in right now.
+export async function getActiveClientByOid(oid) {
+  const result = await query("SELECT * FROM clients WHERE oid = @oid AND status = 'active'", { oid })
+  return result.recordset[0] ? mapRow(result.recordset[0]) : null
+}
+
+// Used by the admin UI: returns a client regardless of status.
+export async function getClientByOid(oid) {
+  const result = await query('SELECT * FROM clients WHERE oid = @oid', { oid })
+  return result.recordset[0] ? mapRow(result.recordset[0]) : null
+}
+
+export async function listClients() {
+  const result = await query('SELECT * FROM clients ORDER BY organization', {})
+  return result.recordset.map(mapRow)
+}
+
+export async function createClient({ organization, fullName, email, phone, mailingAddress, preferredContact }) {
+  const normalizedEmail = email.trim().toLowerCase()
+  const existing = await query('SELECT id FROM clients WHERE email = @email', { email: normalizedEmail })
+  if (existing.recordset.length > 0) {
+    throw new Error('A client with this email already exists')
+  }
+
+  const { oid, temporaryPassword } = await createLocalAccount({ email: normalizedEmail, displayName: fullName })
+
+  await query(
+    `INSERT INTO clients (oid, email, full_name, title, organization, phone, mailing_address, preferred_contact, status)
+     VALUES (@oid, @email, @fullName, 'Client', @organization, @phone, @mailingAddress, @preferredContact, 'active')`,
+    {
+      oid,
+      email: normalizedEmail,
+      fullName,
+      organization,
+      phone: phone || 'Not provided',
+      mailingAddress: mailingAddress || 'Not provided',
+      preferredContact: preferredContact === 'Phone' ? 'Phone' : 'Email',
+    },
+  )
+
+  const client = await getClientByOid(oid)
+  return { client, temporaryPassword }
+}
+
+export async function setClientStatus(oid, status) {
+  const existing = await getClientByOid(oid)
+  if (!existing) return null
+
+  await setAccountEnabled(oid, status === 'active')
+  await query('UPDATE clients SET status = @status, updated_at = SYSUTCDATETIME() WHERE oid = @oid', {
+    oid,
+    status,
+  })
+  return getClientByOid(oid)
 }

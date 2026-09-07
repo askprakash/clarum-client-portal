@@ -1,6 +1,6 @@
 import { app } from '@azure/functions'
 import { authorizePortal, json } from '../auth.js'
-import { listAllowedClients } from '../clients.js'
+import { listClients } from '../clients.js'
 
 app.http('clients', {
   methods: ['GET'],
@@ -12,6 +12,6 @@ app.http('clients', {
     if (auth.role !== 'admin') {
       return json(403, { error: 'Administrator sign-in is required' })
     }
-    return json(200, { clients: listAllowedClients() })
+    return json(200, { clients: await listClients() })
   },
 })

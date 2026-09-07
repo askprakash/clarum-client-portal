@@ -32,7 +32,11 @@ export function Sidebar({
   onCloseMobile,
 }: SidebarProps) {
   const navItems: NavItem[] = isAdmin
-    ? [{ id: 'clients', label: 'Clients' }, ...(clientOpen ? clientNavItems : [])]
+    ? [
+        { id: 'clients', label: 'Clients' },
+        { id: 'staff', label: 'Staff' },
+        ...(clientOpen ? clientNavItems : []),
+      ]
     : clientNavItems
 
   function handleNavigate(view: AppView) {
