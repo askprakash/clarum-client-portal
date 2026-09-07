@@ -38,6 +38,7 @@ async function authorizedFetch(path: string, init: RequestInit = {}) {
   const token = await getApiToken()
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${token}`)
+  headers.set('X-Authorization', `Bearer ${token}`)
   const response = await fetch(path, { ...init, headers })
   if (!response.ok) {
     let message = 'The document service could not complete this request.'
@@ -149,7 +150,7 @@ export const portalService = {
   async openDocument(document: ClientDocument, download = false) {
     const token = await getApiToken()
     const response = await fetch(documentsPath({ id: document.id, ...(download ? { download: '1' } : {}) }), {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'X-Authorization': `Bearer ${token}` },
     })
     if (!response.ok) throw new Error('The document could not be opened.')
     const blob = await response.blob()

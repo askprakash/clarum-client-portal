@@ -54,6 +54,11 @@ export function isPortalAccount() {
 export async function getApiToken() {
   const account = auth.getActiveAccount()
   if (!account) throw new Error('Sign-in required')
-  const result = await auth.acquireTokenSilent({ account, scopes: [apiScope] })
-  return result.accessToken
+  try {
+    const result = await auth.acquireTokenSilent({ account, scopes: [apiScope] })
+    return result.accessToken
+  } catch {
+    await auth.acquireTokenRedirect({ account, scopes: [apiScope] })
+    throw new Error('Sign-in needs to be refreshed. Please try again after Microsoft sign-in completes.')
+  }
 }
