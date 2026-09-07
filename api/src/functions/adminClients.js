@@ -1,6 +1,7 @@
 import { app } from '@azure/functions'
 import { authorizePortal, json } from '../auth.js'
 import { createClient, setClientStatus } from '../clients.js'
+import { graphTokenFromRequest } from '../graph.js'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -40,6 +41,7 @@ app.http('adminClientsCreate', {
         phone: body.phone ? String(body.phone) : undefined,
         mailingAddress: body.mailingAddress ? String(body.mailingAddress) : undefined,
         preferredContact: body.preferredContact === 'Phone' ? 'Phone' : 'Email',
+        graphToken: graphTokenFromRequest(request, body),
       })
       return json(201, { client, temporaryPassword })
     } catch (error) {
@@ -71,7 +73,7 @@ app.http('adminClientsStatus', {
     }
 
     try {
-      const client = await setClientStatus(request.params.oid, status)
+      const client = await setClientStatus(request.params.oid, status, graphTokenFromRequest(request, body))
       if (!client) return json(404, { error: 'Client not found' })
       return json(200, { client })
     } catch (error) {

@@ -5,6 +5,7 @@ export const clientId = '728b382c-e6b6-4b99-bd67-8e24bc45d352'
 export const clientUserId = 'e7468903-52b6-4e96-97ca-239c0ec6188a'
 export const adminEmails = ['prakash@clarumcpa.com']
 export const apiScope = `api://${clientId}/access_as_user`
+export const graphUserScope = 'https://graph.microsoft.com/User.ReadWrite.All'
 export const loginScopes = ['openid', 'profile', 'email', apiScope]
 
 export const auth = new PublicClientApplication({
@@ -60,5 +61,23 @@ export async function getApiToken() {
   } catch {
     await auth.acquireTokenRedirect({ account, scopes: [apiScope] })
     throw new Error('Sign-in needs to be refreshed. Please try again after Microsoft sign-in completes.')
+  }
+}
+
+export async function getGraphToken() {
+  const account = auth.getActiveAccount()
+  if (!account) throw new Error('Sign-in required')
+  try {
+    const result = await auth.acquireTokenSilent({ account, scopes: [graphUserScope] })
+    return result.accessToken
+  } catch {
+    try {
+      const result = await auth.acquireTokenPopup({ account, scopes: [graphUserScope] })
+      return result.accessToken
+    } catch {
+      throw new Error(
+        'Microsoft must allow this portal to create accounts. In Entra, add delegated User.ReadWrite.All to CLARUM Client Portal, grant admin consent, then try again.',
+      )
+    }
   }
 }

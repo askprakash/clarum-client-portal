@@ -1,80 +1,108 @@
-import { query } from './db.js'
 import { createLocalAccount, setAccountEnabled } from './graph.js'
+import { readState, updateState } from './store.js'
 
 const bootstrapEmail = (process.env.BOOTSTRAP_ADMIN_EMAIL || 'prakash@clarumcpa.com').trim().toLowerCase()
 
-function mapRow(row) {
+function mapStaff(row) {
   return {
     id: row.oid,
-    displayName: row.display_name,
+    displayName: row.displayName,
     email: row.email,
-    status: row.status,
+    status: row.status === 'disabled' ? 'disabled' : 'active',
   }
 }
 
 export async function getActiveStaffByOid(oid) {
-  const result = await query("SELECT * FROM staff WHERE oid = @oid AND status = 'active'", { oid })
-  return result.recordset[0] ? mapRow(result.recordset[0]) : null
+  const { state } = await readState()
+  const row = state.staff.find((member) => member.oid === oid && member.status === 'active')
+  return row ? mapStaff(row) : null
 }
 
 export async function getStaffByOid(oid) {
-  const result = await query('SELECT * FROM staff WHERE oid = @oid', { oid })
-  return result.recordset[0] ? mapRow(result.recordset[0]) : null
+  const { state } = await readState()
+  const row = state.staff.find((member) => member.oid === oid)
+  return row ? mapStaff(row) : null
 }
 
 export async function listStaff() {
-  const result = await query('SELECT * FROM staff ORDER BY display_name', {})
-  return result.recordset.map(mapRow)
+  const { state } = await readState()
+  return [...state.staff]
+    .sort((a, b) => a.displayName.localeCompare(b.displayName))
+    .map(mapStaff)
 }
 
 export async function countActiveStaff() {
-  const result = await query("SELECT COUNT(*) AS count FROM staff WHERE status = 'active'", {})
-  return result.recordset[0].count
+  const { state } = await readState()
+  return state.staff.filter((member) => member.status === 'active').length
 }
 
-export async function createStaff({ displayName, email }) {
+export async function createStaff({ displayName, email, graphToken }) {
   const normalizedEmail = email.trim().toLowerCase()
-  const existing = await query('SELECT id FROM staff WHERE email = @email', { email: normalizedEmail })
-  if (existing.recordset.length > 0) {
+  const { state } = await readState()
+  if (state.staff.some((member) => member.email === normalizedEmail)) {
     throw new Error('A staff account with this email already exists')
   }
 
-  const { oid, temporaryPassword } = await createLocalAccount({ email: normalizedEmail, displayName })
+  const { oid, temporaryPassword } = await createLocalAccount({
+    email: normalizedEmail,
+    displayName,
+    graphToken,
+  })
 
-  await query(
-    `INSERT INTO staff (oid, email, display_name, role, status) VALUES (@oid, @email, @displayName, 'admin', 'active')`,
-    { oid, email: normalizedEmail, displayName },
-  )
+  const now = new Date().toISOString()
+  await updateState((current) => {
+    if (current.staff.some((member) => member.email === normalizedEmail || member.oid === oid)) {
+      throw new Error('A staff account with this email already exists')
+    }
+    current.staff.push({
+      oid,
+      email: normalizedEmail,
+      displayName,
+      role: 'admin',
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    })
+    return current
+  })
 
-  const staff = await getActiveStaffByOid(oid)
-  return { staff, temporaryPassword }
+  return { staff: await getStaffByOid(oid), temporaryPassword }
 }
 
-export async function setStaffStatus(oid, status) {
+export async function setStaffStatus(oid, status, graphToken) {
   const existing = await getStaffByOid(oid)
   if (!existing) return null
 
-  await setAccountEnabled(oid, status === 'active')
-  await query('UPDATE staff SET status = @status, updated_at = SYSUTCDATETIME() WHERE oid = @oid', {
-    oid,
-    status,
+  await setAccountEnabled(oid, status === 'active', graphToken)
+  await updateState((current) => {
+    const row = current.staff.find((member) => member.oid === oid)
+    if (row) {
+      row.status = status
+      row.updatedAt = new Date().toISOString()
+    }
+    return current
   })
   return getStaffByOid(oid)
 }
 
-// One-time bootstrap: the very first successful sign-in from BOOTSTRAP_ADMIN_EMAIL (defaults to
-// prakash@clarumcpa.com) becomes the first staff/admin row, as long as the staff table is
-// completely empty. After that, admins are managed entirely through the Staff screen — this
-// path never fires again (checking total rows, not just active ones, so it can't re-fire just
-// because someone later deactivated every admin).
 export async function bootstrapFirstAdmin({ oid, emails, displayName }) {
-  const totalCount = await query('SELECT COUNT(*) AS count FROM staff', {})
-  if (totalCount.recordset[0].count > 0) return null
+  const { state } = await readState()
+  if (state.staff.length > 0) return null
   if (!emails.includes(bootstrapEmail)) return null
 
-  await query(
-    `INSERT INTO staff (oid, email, display_name, role, status) VALUES (@oid, @email, @displayName, 'admin', 'active')`,
-    { oid, email: bootstrapEmail, displayName: displayName || 'Administrator' },
-  )
+  const now = new Date().toISOString()
+  await updateState((current) => {
+    if (current.staff.length > 0) return current
+    current.staff.push({
+      oid,
+      email: bootstrapEmail,
+      displayName: displayName || 'Administrator',
+      role: 'admin',
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    })
+    return current
+  })
   return getActiveStaffByOid(oid)
 }

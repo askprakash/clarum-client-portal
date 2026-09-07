@@ -1,5 +1,6 @@
 import { app } from '@azure/functions'
 import { authorizePortal, json } from '../auth.js'
+import { graphTokenFromRequest } from '../graph.js'
 import { countActiveStaff, createStaff, listStaff, setStaffStatus } from '../staff.js'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -46,7 +47,11 @@ app.http('staffCreate', {
     }
 
     try {
-      const { staff, temporaryPassword } = await createStaff({ displayName, email })
+      const { staff, temporaryPassword } = await createStaff({
+        displayName,
+        email,
+        graphToken: graphTokenFromRequest(request, body),
+      })
       return json(201, { staff, temporaryPassword })
     } catch (error) {
       return json(400, { error: error instanceof Error ? error.message : 'Could not create the staff account' })
@@ -88,7 +93,7 @@ app.http('staffStatus', {
           return json(400, { error: 'At least one active staff account is required' })
         }
       }
-      const updated = await setStaffStatus(targetOid, status)
+      const updated = await setStaffStatus(targetOid, status, graphTokenFromRequest(request, body))
       if (!updated) return json(404, { error: 'Staff account not found' })
       return json(200, { staff: await listStaff() })
     } catch (error) {

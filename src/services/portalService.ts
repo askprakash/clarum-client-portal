@@ -1,4 +1,4 @@
-import { getApiToken, isAdminAccount, isClientAccount, clientUserId } from '../auth'
+import { getApiToken, getGraphToken, isAdminAccount, isClientAccount, clientUserId } from '../auth'
 import type {
   ActivityItem,
   ClientDocument,
@@ -34,11 +34,14 @@ function setActingClientId(id: string | null) {
   else sessionStorage.removeItem(actingClientKey)
 }
 
-async function authorizedFetch(path: string, init: RequestInit = {}) {
+async function authorizedFetch(path: string, init: RequestInit = {}, graphToken?: string) {
   const token = await getApiToken()
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${token}`)
   headers.set('X-Authorization', `Bearer ${token}`)
+  if (graphToken) {
+    headers.set('X-Graph-Authorization', `Bearer ${graphToken}`)
+  }
   const response = await fetch(path, { ...init, headers })
   if (!response.ok) {
     let message = 'The document service could not complete this request.'
@@ -53,12 +56,26 @@ async function authorizedFetch(path: string, init: RequestInit = {}) {
   return response
 }
 
-async function authorizedJsonFetch<T>(path: string, method: string, body?: unknown): Promise<T> {
-  const response = await authorizedFetch(path, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
+async function authorizedJsonFetch<T>(
+  path: string,
+  method: string,
+  body?: unknown,
+  options: { graph?: boolean } = {},
+): Promise<T> {
+  const graphToken = options.graph ? await getGraphToken() : undefined
+  const payload =
+    graphToken && body && typeof body === 'object'
+      ? { ...(body as Record<string, unknown>), graphAccessToken: graphToken }
+      : body
+  const response = await authorizedFetch(
+    path,
+    {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: payload === undefined ? undefined : JSON.stringify(payload),
+    },
+    graphToken,
+  )
   return (await response.json()) as T
 }
 
@@ -99,12 +116,17 @@ export const portalService = {
   },
 
   async createClient(input: NewClientInput): Promise<ProvisionedAccount> {
-    const body = await authorizedJsonFetch<{ temporaryPassword: string }>('/api/admin/clients', 'POST', input)
+    const body = await authorizedJsonFetch<{ temporaryPassword: string }>(
+      '/api/admin/clients',
+      'POST',
+      input,
+      { graph: true },
+    )
     return { email: input.email, temporaryPassword: body.temporaryPassword }
   },
 
   async setClientStatus(oid: string, status: 'active' | 'disabled'): Promise<void> {
-    await authorizedJsonFetch('/api/admin/clients/' + encodeURIComponent(oid), 'PATCH', { status })
+    await authorizedJsonFetch('/api/admin/clients/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
   },
 
   async listStaff(): Promise<StaffMember[]> {
@@ -113,12 +135,17 @@ export const portalService = {
   },
 
   async createStaff(input: NewStaffInput): Promise<ProvisionedAccount> {
-    const body = await authorizedJsonFetch<{ temporaryPassword: string }>('/api/admin/staff', 'POST', input)
+    const body = await authorizedJsonFetch<{ temporaryPassword: string }>(
+      '/api/admin/staff',
+      'POST',
+      input,
+      { graph: true },
+    )
     return { email: input.email, temporaryPassword: body.temporaryPassword }
   },
 
   async setStaffStatus(oid: string, status: 'active' | 'disabled'): Promise<void> {
-    await authorizedJsonFetch('/api/admin/staff/' + encodeURIComponent(oid), 'PATCH', { status })
+    await authorizedJsonFetch('/api/admin/staff/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
   },
 
   async listDocuments(): Promise<ClientDocument[]> {

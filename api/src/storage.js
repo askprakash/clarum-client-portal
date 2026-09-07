@@ -1,5 +1,5 @@
-// Raw document bytes only. Metadata (name, category, status, who uploaded it, when) lives in
-// Azure SQL — see documentsRepo.js — not in blob metadata as it used to.
+// Raw document bytes. Client/staff/document lists live in portal-meta/state.json in this
+// same container — see store.js.
 
 import { BlobServiceClient } from '@azure/storage-blob'
 

@@ -1,74 +1,100 @@
-import { query } from './db.js'
 import { createLocalAccount, setAccountEnabled } from './graph.js'
+import { readState, updateState } from './store.js'
 
-function mapRow(row) {
+function mapClient(row) {
   return {
     id: row.oid,
-    fullName: row.full_name,
-    title: row.title,
+    fullName: row.fullName,
+    title: row.title || 'Client',
     organization: row.organization,
     email: row.email,
-    phone: row.phone,
-    mailingAddress: row.mailing_address,
-    clientSince: row.client_since,
-    engagements: JSON.parse(row.engagements || '[]'),
-    preferredContact: row.preferred_contact,
-    status: row.status,
+    phone: row.phone || 'Not provided',
+    mailingAddress: row.mailingAddress || 'Not provided',
+    clientSince: row.clientSince || 'Not provided',
+    engagements: Array.isArray(row.engagements) ? row.engagements : [],
+    preferredContact: row.preferredContact === 'Phone' ? 'Phone' : 'Email',
+    status: row.status === 'disabled' ? 'disabled' : 'active',
   }
 }
 
-// Used by auth: only ever returns a client that is allowed to sign in right now.
 export async function getActiveClientByOid(oid) {
-  const result = await query("SELECT * FROM clients WHERE oid = @oid AND status = 'active'", { oid })
-  return result.recordset[0] ? mapRow(result.recordset[0]) : null
+  const { state } = await readState()
+  const row = state.clients.find((client) => client.oid === oid && client.status === 'active')
+  return row ? mapClient(row) : null
 }
 
-// Used by the admin UI: returns a client regardless of status.
 export async function getClientByOid(oid) {
-  const result = await query('SELECT * FROM clients WHERE oid = @oid', { oid })
-  return result.recordset[0] ? mapRow(result.recordset[0]) : null
+  const { state } = await readState()
+  const row = state.clients.find((client) => client.oid === oid)
+  return row ? mapClient(row) : null
 }
 
 export async function listClients() {
-  const result = await query('SELECT * FROM clients ORDER BY organization', {})
-  return result.recordset.map(mapRow)
+  const { state } = await readState()
+  return [...state.clients]
+    .sort((a, b) => a.organization.localeCompare(b.organization))
+    .map(mapClient)
 }
 
-export async function createClient({ organization, fullName, email, phone, mailingAddress, preferredContact }) {
+export async function createClient({
+  organization,
+  fullName,
+  email,
+  phone,
+  mailingAddress,
+  preferredContact,
+  graphToken,
+}) {
   const normalizedEmail = email.trim().toLowerCase()
-  const existing = await query('SELECT id FROM clients WHERE email = @email', { email: normalizedEmail })
-  if (existing.recordset.length > 0) {
+  const { state } = await readState()
+  if (state.clients.some((client) => client.email === normalizedEmail)) {
     throw new Error('A client with this email already exists')
   }
 
-  const { oid, temporaryPassword } = await createLocalAccount({ email: normalizedEmail, displayName: fullName })
+  const { oid, temporaryPassword } = await createLocalAccount({
+    email: normalizedEmail,
+    displayName: fullName,
+    graphToken,
+  })
 
-  await query(
-    `INSERT INTO clients (oid, email, full_name, title, organization, phone, mailing_address, preferred_contact, status)
-     VALUES (@oid, @email, @fullName, 'Client', @organization, @phone, @mailingAddress, @preferredContact, 'active')`,
-    {
+  const now = new Date().toISOString()
+  await updateState((current) => {
+    if (current.clients.some((client) => client.email === normalizedEmail || client.oid === oid)) {
+      throw new Error('A client with this email already exists')
+    }
+    current.clients.push({
       oid,
       email: normalizedEmail,
       fullName,
+      title: 'Client',
       organization,
       phone: phone || 'Not provided',
       mailingAddress: mailingAddress || 'Not provided',
       preferredContact: preferredContact === 'Phone' ? 'Phone' : 'Email',
-    },
-  )
+      engagements: [],
+      clientSince: now.slice(0, 10),
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    })
+    return current
+  })
 
-  const client = await getClientByOid(oid)
-  return { client, temporaryPassword }
+  return { client: await getClientByOid(oid), temporaryPassword }
 }
 
-export async function setClientStatus(oid, status) {
+export async function setClientStatus(oid, status, graphToken) {
   const existing = await getClientByOid(oid)
   if (!existing) return null
 
-  await setAccountEnabled(oid, status === 'active')
-  await query('UPDATE clients SET status = @status, updated_at = SYSUTCDATETIME() WHERE oid = @oid', {
-    oid,
-    status,
+  await setAccountEnabled(oid, status === 'active', graphToken)
+  await updateState((current) => {
+    const row = current.clients.find((client) => client.oid === oid)
+    if (row) {
+      row.status = status
+      row.updatedAt = new Date().toISOString()
+    }
+    return current
   })
   return getClientByOid(oid)
 }

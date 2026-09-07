@@ -1,7 +1,7 @@
-// Provisions and manages local accounts in the CLARUM Clients (Entra External ID / CIAM)
-// tenant via Microsoft Graph, using an app-only (client credentials) service principal.
-// This is a DIFFERENT app registration from the one clients/staff sign in through
-// (see SETUP.md) — it exists only for this server-side provisioning.
+// Provisions local accounts in the CLARUM Clients tenant via Microsoft Graph.
+// Prefers the signed-in administrator's delegated token (X-Graph-Authorization) so
+// no extra app registration or client secret is required. App-only GRAPH_CLIENT_*
+// credentials remain supported if they are configured.
 
 import { randomBytes } from 'node:crypto'
 import { ciamTenantDomain, tenantId as ciamTenantId } from './config.js'
@@ -13,7 +13,7 @@ function requireGraphCredentials() {
   const clientSecret = process.env.GRAPH_CLIENT_SECRET
   if (!clientId || !clientSecret) {
     throw new Error(
-      'Account provisioning is not configured (GRAPH_CLIENT_ID / GRAPH_CLIENT_SECRET app settings are missing)',
+      'Microsoft must allow this portal to create accounts. Sign in again if prompted, then retry.',
     )
   }
   return { clientId, clientSecret }
@@ -21,7 +21,7 @@ function requireGraphCredentials() {
 
 let cachedToken = null
 
-async function getGraphToken() {
+async function getAppGraphToken() {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
     return cachedToken.token
   }
@@ -44,21 +44,57 @@ async function getGraphToken() {
   return cachedToken.token
 }
 
+async function resolveGraphToken(graphToken) {
+  if (typeof graphToken === 'string' && graphToken.length > 20) return graphToken
+  return getAppGraphToken()
+}
+
 function generateTemporaryPassword() {
   const raw = randomBytes(18).toString('base64').replace(/[+/=]/g, '')
-  // Guarantee upper/lower/digit/symbol so it always satisfies Entra's default complexity policy.
   return `Clarum-${raw.slice(0, 16)}!7`
 }
 
-export async function createLocalAccount({ email, displayName }) {
-  const token = await getGraphToken()
+function mailNicknameFor(email) {
+  const local = email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 32) || 'client'
+  const suffix = randomBytes(3).toString('hex')
+  return `${local}${suffix}`.slice(0, 64)
+}
+
+function graphError(detail, fallback) {
+  const lowered = detail.toLowerCase()
+  if (lowered.includes('insufficient') || lowered.includes('authorization_requestdenied') || lowered.includes('403')) {
+    return 'Microsoft did not allow this portal to create the account. Grant User.ReadWrite.All for CLARUM Client Portal, then sign in again.'
+  }
+  if (lowered.includes('already exists') || lowered.includes('objectconflict') || lowered.includes('another object')) {
+    return 'An account with this email already exists in Microsoft Entra'
+  }
+  return `${fallback}: ${detail.slice(0, 300) || 'request failed'}`
+}
+
+export function graphTokenFromRequest(request, body) {
+  const names = ['x-graph-authorization', 'X-Graph-Authorization']
+  for (const name of names) {
+    const header = request.headers.get(name)
+    if (!header) continue
+    const token = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : header.trim()
+    if (token) return token
+  }
+  if (body && typeof body.graphAccessToken === 'string') return body.graphAccessToken.trim()
+  return ''
+}
+
+export async function createLocalAccount({ email, displayName, graphToken }) {
+  const token = await resolveGraphToken(graphToken)
   const password = generateTemporaryPassword()
+  const mailNickname = mailNicknameFor(email)
   const response = await fetch('https://graph.microsoft.com/v1.0/users', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       accountEnabled: true,
       displayName,
+      mailNickname,
+      userPrincipalName: `${mailNickname}@${ciamTenantDomain}`,
       identities: [
         {
           signInType: 'emailAddress',
@@ -68,21 +104,21 @@ export async function createLocalAccount({ email, displayName }) {
       ],
       passwordProfile: {
         password,
-        forceChangePasswordNextSignIn: true,
+        forceChangePasswordNextSignIn: false,
       },
       passwordPolicies: 'DisablePasswordExpiration',
     }),
   })
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
-    throw new Error(`Could not create the account in Microsoft Entra: ${detail.slice(0, 300) || response.statusText}`)
+    throw new Error(graphError(detail, 'Could not create the account in Microsoft Entra'))
   }
   const created = await response.json()
   return { oid: created.id, temporaryPassword: password }
 }
 
-export async function setAccountEnabled(oid, enabled) {
-  const token = await getGraphToken()
+export async function setAccountEnabled(oid, enabled, graphToken) {
+  const token = await resolveGraphToken(graphToken)
   const response = await fetch(`https://graph.microsoft.com/v1.0/users/${oid}`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -90,6 +126,6 @@ export async function setAccountEnabled(oid, enabled) {
   })
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
-    throw new Error(`Could not update the account in Microsoft Entra: ${detail.slice(0, 300) || response.statusText}`)
+    throw new Error(graphError(detail, 'Could not update the account in Microsoft Entra'))
   }
 }

@@ -82,6 +82,7 @@ function emailsFromPayload(payload) {
   if (typeof payload.preferred_username === 'string') values.push(payload.preferred_username)
   if (typeof payload.email === 'string') values.push(payload.email)
   if (typeof payload.upn === 'string') values.push(payload.upn)
+  if (typeof payload.unique_name === 'string') values.push(payload.unique_name)
   if (Array.isArray(payload.emails)) {
     for (const email of payload.emails) {
       if (typeof email === 'string') values.push(email)
@@ -127,8 +128,12 @@ export async function authorizePortal(request) {
     if (client) return { role: 'client', oid, client }
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
-    if (message.includes('AZURE_SQL') || message.includes('Database is not configured')) {
-      return { status: 503, body: { error: 'The portal database is not configured yet' } }
+    if (
+      message.includes('AZURE_SQL') ||
+      message.includes('Database is not configured') ||
+      message.includes('Document storage is not configured')
+    ) {
+      return { status: 503, body: { error: 'Portal storage is not configured yet' } }
     }
     throw error
   }

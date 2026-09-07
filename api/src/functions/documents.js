@@ -40,7 +40,7 @@ app.http('documents', {
         return {
           status: 200,
           headers: {
-            'Content-Type': row.content_type,
+            'Content-Type': row.contentType || 'application/octet-stream',
             'Content-Disposition': `${disposition}; filename="${row.name.replace(/"/g, '')}"`,
             'Cache-Control': 'no-store',
           },
