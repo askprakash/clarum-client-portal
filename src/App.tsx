@@ -35,7 +35,7 @@ function ClientWorkspace({
 }: {
   client: ClientProfile
   isAdmin: boolean
-  view: Exclude<AppView, 'clients'>
+  view: AppView
   mobileNavOpen: boolean
   error: string
   onNavigate: (view: AppView) => void
