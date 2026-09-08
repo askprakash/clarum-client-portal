@@ -1,4 +1,4 @@
-import { createRemoteJWKSet, decodeJwt, jwtVerify } from 'jose'
+import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { apiAudience, clientId, tenantId } from './config.js'
 import { getActiveClientByOid } from './clients.js'
 import { bootstrapFirstAdmin, getActiveStaffByOid } from './staff.js'
@@ -14,62 +14,41 @@ function getJwks(url) {
   return jwks
 }
 
-function jwksUrlsForIssuer(iss) {
-  const urls = [
-    `https://clarumclients.ciamlogin.com/${tenantId}/discovery/v2.0/keys`,
-    `https://${tenantId}.ciamlogin.com/${tenantId}/discovery/v2.0/keys`,
-    `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`,
-  ]
-  if (typeof iss === 'string' && iss.startsWith('https://')) {
-    try {
-      const parsed = new URL(iss)
-      const tenantPart = parsed.pathname.split('/').filter(Boolean)[0]
-      if (tenantPart) {
-        urls.unshift(`${parsed.origin}/${tenantPart}/discovery/v2.0/keys`)
-      }
-    } catch {
-      // Ignore malformed issuer values and keep the default key endpoints.
-    }
-  }
-  return [...new Set(urls)]
-}
-
-function looksLikeJwt(value) {
-  return value.split('.').length === 3 && value.length > 80
-}
+const trustedIssuers = [
+  `https://${tenantId}.ciamlogin.com/${tenantId}/v2.0`,
+  `https://clarumclients.ciamlogin.com/${tenantId}/v2.0`,
+  `https://login.microsoftonline.com/${tenantId}/v2.0`,
+]
+const keyUrls = [
+  `https://clarumclients.ciamlogin.com/${tenantId}/discovery/v2.0/keys`,
+  `https://${tenantId}.ciamlogin.com/${tenantId}/discovery/v2.0/keys`,
+  `https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`,
+]
 
 function tokenFromHeader(header) {
   if (!header) return ''
   const value = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : header.trim()
-  return looksLikeJwt(value) ? value : ''
+  return value.split('.').length === 3 && value.length > 80 ? value : ''
 }
 
-function bearerToken(request) {
-  const names = ['authorization', 'Authorization', 'x-authorization', 'X-Authorization']
-  for (const name of names) {
-    const token = tokenFromHeader(request.headers.get(name))
-    if (token) return token
-  }
-  return ''
+export function portalTokens(request) {
+  // Azure can supply its own Authorization header when proxying to Functions.
+  // Prefer the explicit portal header, but verify every candidate before trusting it.
+  return [...new Set(['x-portal-authorization', 'x-authorization', 'authorization']
+    .map((name) => tokenFromHeader(request.headers.get(name))).filter(Boolean))]
 }
 
-async function verifyAccessToken(token) {
-  let iss
-  try {
-    iss = decodeJwt(token).iss
-  } catch {
-    iss = undefined
-  }
-
-  const options = {
-    audience: [clientId, apiAudience],
-    clockTolerance: 120,
-  }
-
+export async function verifyAccessToken(token) {
   let lastError
-  for (const url of jwksUrlsForIssuer(iss)) {
+  for (const url of keyUrls) {
     try {
-      return await jwtVerify(token, getJwks(url), options)
+      const result = await jwtVerify(token, getJwks(url), {
+        audience: [clientId, apiAudience],
+        issuer: trustedIssuers,
+        clockTolerance: 120,
+      })
+      if (result.payload.tid !== tenantId) throw new Error('Unexpected tenant')
+      return result
     } catch (error) {
       lastError = error
     }
@@ -92,16 +71,24 @@ function emailsFromPayload(payload) {
 }
 
 export async function authorizePortal(request) {
-  const token = bearerToken(request)
-  if (!token) {
-    return { status: 401, body: { error: 'Sign-in required' } }
-  }
+  const tokens = portalTokens(request)
+  if (!tokens.length) return { status: 401, body: { error: 'Sign-in required' } }
 
   let payload
-  try {
-    ;({ payload } = await verifyAccessToken(token))
-  } catch {
-    return { status: 401, body: { error: 'The sign-in token is not valid' } }
+  let failure
+  for (const token of tokens) {
+    try {
+      ;({ payload } = await verifyAccessToken(token))
+      break
+    } catch (error) {
+      failure = error
+    }
+  }
+  if (!payload) {
+    return { status: 401, body: {
+      error: 'The sign-in token is not valid',
+      detail: typeof failure?.code === 'string' ? failure.code : 'Token verification failed',
+    } }
   }
 
   if (payload.tid !== tenantId) {

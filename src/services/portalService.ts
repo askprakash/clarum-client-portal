@@ -39,17 +39,21 @@ async function authorizedFetch(path: string, init: RequestInit = {}, graphToken?
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${token}`)
   headers.set('X-Authorization', `Bearer ${token}`)
+  headers.set('X-Portal-Authorization', `Bearer ${token}`)
   if (graphToken) {
     headers.set('X-Graph-Authorization', `Bearer ${graphToken}`)
   }
   const response = await fetch(path, { ...init, headers })
   if (!response.ok) {
-    let message = 'The document service could not complete this request.'
+    let message = `The portal could not complete this request (${response.status}).`
+    const text = await response.text()
     try {
-      const body = (await response.json()) as { error?: string }
-      if (body.error) message = body.error
+      const body = JSON.parse(text) as { error?: string; detail?: string }
+      if (body.error) message = body.detail ? `${body.error} (${body.detail})` : body.error
     } catch {
-      // Use the default message when the API does not return JSON.
+      // A platform or proxy failure may return plain text rather than API JSON.
+      const detail = text.replace(/<[^>]+>/g, ' ').trim().slice(0, 180)
+      if (detail) message += ` ${detail}`
     }
     throw new Error(message)
   }
