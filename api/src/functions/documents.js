@@ -1,8 +1,6 @@
-import { randomUUID } from 'node:crypto'
 import { app } from '@azure/functions'
 import { authorizeClient, json } from '../auth.js'
-import { getDocumentBytes, putDocumentBytes } from '../storage.js'
-import { getDocumentRow, insertDocument, listDocumentsForClient } from '../documentsRepo.js'
+import { getDocumentBytes, listDocumentsForClient, uploadDocument } from '../documents.js'
 
 const categories = new Set([
   'Tax Returns',
@@ -12,6 +10,13 @@ const categories = new Set([
   'Payroll',
   'Correspondence',
   'Other',
+  'Permanent',
+  'Accounting',
+  'Tax',
+  'Advisory',
+  'Workpapers',
+  'Client Shared',
+  'Client Uploads',
 ])
 
 app.http('documents', {
@@ -27,24 +32,19 @@ app.http('documents', {
       if (request.method === 'GET') {
         const id = request.query.get('id')
         if (!id) {
-          return json(200, { documents: await listDocumentsForClient(clientOid) })
+          return json(200, { documents: await listDocumentsForClient(clientOid, auth.role) })
         }
-        if (!/^[0-9a-f-]{36}$/i.test(id)) {
-          return json(400, { error: 'Invalid document identifier' })
-        }
-        const row = await getDocumentRow(clientOid, id)
-        if (!row) return json(404, { error: 'Document not found' })
-        const buffer = await getDocumentBytes(clientOid, id)
-        if (!buffer) return json(404, { error: 'Document not found' })
+        const downloaded = await getDocumentBytes(clientOid, auth.role, id)
+        if (!downloaded) return json(404, { error: 'Document not found' })
         const disposition = request.query.get('download') === '1' ? 'attachment' : 'inline'
         return {
           status: 200,
           headers: {
-            'Content-Type': row.contentType || 'application/octet-stream',
-            'Content-Disposition': `${disposition}; filename="${row.name.replace(/"/g, '')}"`,
+            'Content-Type': downloaded.contentType || 'application/octet-stream',
+            'Content-Disposition': `${disposition}; filename="${downloaded.name.replace(/"/g, '')}"`,
             'Cache-Control': 'no-store',
           },
-          body: buffer,
+          body: downloaded.buffer,
         }
       }
 
@@ -61,22 +61,11 @@ app.http('documents', {
         return json(400, { error: 'Files must be 20 MB or smaller' })
       }
 
-      const id = randomUUID()
-      const name = uploaded.name || 'document'
-      const buffer = Buffer.from(await uploaded.arrayBuffer())
-      const contentType = uploaded.type || 'application/octet-stream'
-
-      await putDocumentBytes(clientOid, id, buffer, contentType)
-      const document = await insertDocument({
-        id,
-        clientOid,
-        name,
+      const document = await uploadDocument(clientOid, auth.role, {
+        fileName: uploaded.name || 'document',
+        buffer: Buffer.from(await uploaded.arrayBuffer()),
+        contentType: uploaded.type || 'application/octet-stream',
         category,
-        fileType: name.includes('.') ? name.split('.').pop().toUpperCase() : 'FILE',
-        contentType,
-        sizeBytes: buffer.length,
-        uploadedByOid: auth.oid,
-        uploadedByRole: auth.role,
       })
       return json(201, { document })
     } catch (error) {

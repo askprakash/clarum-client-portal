@@ -1,9 +1,10 @@
 import { PublicClientApplication } from '@azure/msal-browser'
+import type { ClientProfile } from './types'
 
 export const tenantId = 'd13486fb-c6cb-40ad-9587-8d71585c135b'
 export const clientId = '728b382c-e6b6-4b99-bd67-8e24bc45d352'
-export const clientUserId = 'e7468903-52b6-4e96-97ca-239c0ec6188a'
-export const adminEmails = ['prakash@clarumcpa.com']
+let portalRole: 'admin' | 'client' | null = null
+let portalClient: ClientProfile | null = null
 export const apiScope = `api://${clientId}/access_as_user`
 export const graphUserScope = 'https://graph.microsoft.com/User.ReadWrite.All'
 export const loginScopes = ['openid', 'profile', 'email', apiScope]
@@ -24,28 +25,37 @@ export async function initializeAuth() {
   const result = await auth.handleRedirectPromise()
   const account = result?.account ?? auth.getAllAccounts()[0] ?? null
   auth.setActiveAccount(account)
+  portalRole = null
+  portalClient = null
+  if (!account || account.tenantId !== tenantId) return
+  const token = await getApiToken()
+  const response = await fetch('/api/profile', {
+    headers: { 'X-Portal-Authorization': `Bearer ${token}` },
+  })
+  if (response.status === 403) return
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({})) as { error?: string }
+    throw new Error(body.error || `The portal could not load your profile (${response.status}).`)
+  }
+  const profile = await response.json() as { role: string; client: ClientProfile | null }
+  if (profile.role === 'admin') portalRole = 'admin'
+  if (profile.role === 'client' && profile.client?.id === account.idTokenClaims?.oid) {
+    portalRole = 'client'
+    portalClient = profile.client
+  }
 }
 
 export function isClientAccount() {
-  const account = auth.getActiveAccount()
-  return account?.tenantId === tenantId && account.idTokenClaims?.oid === clientUserId
+  return portalRole === 'client'
 }
 
-function accountEmails() {
-  const account = auth.getActiveAccount()
-  const claims = (account?.idTokenClaims ?? {}) as Record<string, unknown>
-  const values: unknown[] = [account?.username, claims.preferred_username, claims.email, claims.upn]
-  if (Array.isArray(claims.emails)) values.push(...claims.emails)
-  return values
-    .filter((value): value is string => typeof value === 'string')
-    .map((value) => value.trim().toLowerCase())
+export function getSignedInClient() {
+  if (!portalClient) throw new Error('Client sign-in required')
+  return portalClient
 }
 
 export function isAdminAccount() {
-  const account = auth.getActiveAccount()
-  if (account?.tenantId !== tenantId) return false
-  const emails = accountEmails()
-  return adminEmails.some((email) => emails.includes(email))
+  return portalRole === 'admin'
 }
 
 export function isPortalAccount() {

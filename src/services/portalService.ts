@@ -1,4 +1,4 @@
-import { getApiToken, getGraphToken, isAdminAccount, isClientAccount, clientUserId } from '../auth'
+import { getApiToken, getGraphToken, isAdminAccount, isClientAccount, getSignedInClient } from '../auth'
 import type {
   ActivityItem,
   ClientDocument,
@@ -9,19 +9,6 @@ import type {
   ProvisionedAccount,
   StaffMember,
 } from '../types'
-
-const fallbackClient: ClientProfile = {
-  id: clientUserId,
-  fullName: 'PRC ANALYTICS INC',
-  title: 'Client',
-  organization: 'PRC ANALYTICS INC',
-  email: 'prakash@prcanalytics.com',
-  phone: 'Not provided',
-  mailingAddress: 'Not provided',
-  clientSince: 'Not provided',
-  engagements: [],
-  preferredContact: 'Email',
-}
 
 const actingClientKey = 'clarum-acting-client'
 
@@ -103,7 +90,7 @@ export const portalService = {
   },
 
   getCurrentClient(): ClientProfile {
-    if (isClientAccount()) return fallbackClient
+    if (isClientAccount()) return getSignedInClient()
     if (isAdminAccount()) {
       const selected = cachedClients.find((client) => client.id === actingClientId)
       if (selected) return selected

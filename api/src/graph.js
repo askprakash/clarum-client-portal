@@ -1,16 +1,16 @@
 // Provisions local accounts in the CLARUM Clients tenant via Microsoft Graph.
 // Prefers the signed-in administrator's delegated token (X-Graph-Authorization) so
-// no extra app registration or client secret is required. App-only GRAPH_CLIENT_*
+// no extra app registration or client secret is required. App-only CIAM_GRAPH_CLIENT_*
 // credentials remain supported if they are configured.
 
 import { randomBytes } from 'node:crypto'
 import { ciamTenantDomain, tenantId as ciamTenantId } from './config.js'
 
-const tokenTenantId = process.env.GRAPH_TENANT_ID || ciamTenantId
+const tokenTenantId = process.env.CIAM_GRAPH_TENANT_ID || ciamTenantId
 
 function requireGraphCredentials() {
-  const clientId = process.env.GRAPH_CLIENT_ID
-  const clientSecret = process.env.GRAPH_CLIENT_SECRET
+  const clientId = process.env.CIAM_GRAPH_CLIENT_ID
+  const clientSecret = process.env.CIAM_GRAPH_CLIENT_SECRET
   if (!clientId || !clientSecret) {
     throw new Error(
       'Microsoft must allow this portal to create accounts. Sign in again if prompted, then retry.',

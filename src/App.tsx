@@ -153,6 +153,7 @@ function AdminPortal({
           ) : (
             <ClientsPage
               onOpenClient={(client) => {
+                setClients((current) => [...current.filter((item) => item.id !== client.id), client])
                 portalService.setActingClient(client.id)
                 setActingId(client.id)
                 setView('dashboard')

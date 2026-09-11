@@ -1,37 +1,73 @@
-# Setup: client and staff accounts
+# Setup: SharePoint documents and portal accounts
 
-The portal stores clients, staff, and document metadata in the **same Azure blob storage**
-already used for files (`DOCUMENT_STORAGE_CONNECTION`). A separate Azure SQL database is
-not required.
+Client documents are stored in the existing **CLARUMCPA Team Site**. The API uses Microsoft
+Graph with **Sites.Selected** (write access to that site only). Azure Blob Storage and Azure
+SQL are not used.
 
-Creating a client or staff account also creates a local sign-in in the **CLARUM Clients**
-tenant. That uses Microsoft Graph with the **signed-in administrator** (Prakash@clarumcpa.com),
-so you do not need a second app registration or client secret.
+Portal sign-in stays on **CLARUM Clients** (Entra External ID). SharePoint lives in the
+**CLARUM CPA Microsoft 365** tenant. Those are different directories.
 
-## One-time Graph permission
+## SharePoint site (already created)
 
-In the Entra admin center, stay in the **CLARUM Clients** tenant and open the existing
-**CLARUM Client Portal** app (`728b382c-e6b6-4b99-bd67-8e24bc45d352`):
+Use this site. Do not create another one.
 
-1. API permissions → Add a permission → Microsoft Graph → **Delegated permissions** →
-   `User.ReadWrite.All` → Add.
-2. Click **Grant admin consent for CLARUM Clients**.
+- Site: **CLARUMCPA Team Site**
+- URL: https://clarumcpa.sharepoint.com
+- Library: Documents (`/Shared Documents`)
+- `GRAPH_TENANT_ID` = `9720f802-3a92-40d5-9be2-edac49437dcb`
+- `SHAREPOINT_SITE_ID` = `clarumcpa.sharepoint.com,0bd61bf5-50d6-4a26-be7c-acec30d47f12,8b0a3862-9c7b-44a4-aff9-e56876354b8d`
+- `SHAREPOINT_DRIVE_ID` = `b!9RvWC9ZQJkq-fKzsMNR_EmI4Cot7nKREr_nlaHY1S42Wry56NrjrSKRrFVdzrBNT`
 
-The first time you add a client after that, Microsoft may show a consent or sign-in popup
-once. After it succeeds, Add client creates the Entra account and shows the temporary
-password.
+The portal creates client folders automatically:
 
-## First admin sign-in
+Permanent, Accounting, Tax, Advisory, Workpapers, Client Shared, Client Uploads.
 
-The staff list starts empty. The first person who signs in as
-`prakash@clarumcpa.com` (or `BOOTSTRAP_ADMIN_EMAIL` if you set that app setting) is stored
-as the first administrator automatically.
+## App registration for SharePoint (Microsoft 365 tenant)
 
-That email still needs a **local account** in the CLARUM Clients tenant (Users → New user →
-Create new external user). Client and staff accounts added from the portal after that are
-created automatically.
+Do **not** reuse the CLARUM Client Portal SPA in the CLARUM Clients tenant for this.
 
-## Existing client
+1. Switch to the **CLARUM CPA** (clarumcpa.com) directory.
+2. App registrations → New registration → `clarum-portal-sharepoint`.
+   Accounts in this organizational directory only. No redirect URI.
+3. Certificates & secrets → New client secret → copy the value.
+4. API permissions → Microsoft Graph → **Application** permissions → `Sites.Selected` → Add.
+5. Grant admin consent for CLARUM CPA.
 
-PRC ANALYTICS INC (`prakash@prcanalytics.com`) is seeded automatically the first time the
-portal writes its metadata blob, using the same Entra object ID as today.
+`Sites.Selected` does not grant access by itself. A Global Admin must grant this app
+**write** on CLARUMCPA Team Site once.
+
+In Graph Explorer (signed in as a CLARUM CPA admin):
+
+```
+POST https://graph.microsoft.com/v1.0/sites/clarumcpa.sharepoint.com,0bd61bf5-50d6-4a26-be7c-acec30d47f12,8b0a3862-9c7b-44a4-aff9-e56876354b8d/permissions
+```
+
+```json
+{
+  "roles": ["write"],
+  "grantedToIdentities": [
+    {
+      "application": {
+        "id": "<GRAPH_CLIENT_ID>",
+        "displayName": "clarum-portal-sharepoint"
+      }
+    }
+  ]
+}
+```
+
+## SWA application settings
+
+```
+GRAPH_TENANT_ID          = 9720f802-3a92-40d5-9be2-edac49437dcb
+GRAPH_CLIENT_ID          = <clarum-portal-sharepoint application (client) ID>
+GRAPH_CLIENT_SECRET      = <client secret>
+SHAREPOINT_SITE_ID       = clarumcpa.sharepoint.com,0bd61bf5-50d6-4a26-be7c-acec30d47f12,8b0a3862-9c7b-44a4-aff9-e56876354b8d
+SHAREPOINT_DRIVE_ID      = b!9RvWC9ZQJkq-fKzsMNR_EmI4Cot7nKREr_nlaHY1S42Wry56NrjrSKRrFVdzrBNT
+```
+
+## Creating client sign-in accounts
+
+Add client still uses the signed-in administrator in **CLARUM Clients**, with delegated
+`User.ReadWrite.All` on the existing portal app (`728b382c-...`). That is separate from
+SharePoint Sites.Selected.

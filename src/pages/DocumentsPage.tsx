@@ -3,19 +3,9 @@ import { DocumentTable } from '../components/DocumentTable'
 import { portalService } from '../services/portalService'
 import type { ClientDocument, DocumentCategory } from '../types'
 
-const categories: Array<DocumentCategory | 'All'> = [
-  'All',
-  'Tax Returns',
-  'Organizers',
-  'Financial Statements',
-  'Engagement Letters',
-  'Payroll',
-  'Correspondence',
-]
-
 export function DocumentsPage() {
   const client = portalService.getCurrentClient()
-  const [category, setCategory] = useState<(typeof categories)[number]>('All')
+  const [category, setCategory] = useState<DocumentCategory | 'All'>('All')
   const [documents, setDocuments] = useState<ClientDocument[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -42,6 +32,10 @@ export function DocumentsPage() {
     () => (category === 'All' ? documents : documents.filter((doc) => doc.category === category)),
     [category, documents],
   )
+  const categoryOptions = useMemo(() => {
+    const found = [...new Set(documents.map((doc) => doc.category))]
+    return ['All', ...found]
+  }, [documents])
 
   return (
     <section className="page">
@@ -50,8 +44,8 @@ export function DocumentsPage() {
           <p className="eyebrow">Files</p>
           <h1>Documents</h1>
           <p className="lede">
-            View and download files prepared for {client.organization}. Uploads are stored
-            for your account after server-side authorization.
+            View and download files shared with {client.organization}. Internal CLARUM
+            workpapers are not shown in the client portal.
           </p>
         </div>
       </div>
@@ -64,7 +58,7 @@ export function DocumentsPage() {
           <label className="filter">
             <span>Category</span>
             <select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>
-              {categories.map((item) => (
+              {categoryOptions.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>

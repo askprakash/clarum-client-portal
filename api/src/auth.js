@@ -114,15 +114,8 @@ export async function authorizePortal(request) {
     const client = await getActiveClientByOid(oid)
     if (client) return { role: 'client', oid, client }
   } catch (error) {
-    const message = error instanceof Error ? error.message : ''
-    if (
-      message.includes('AZURE_SQL') ||
-      message.includes('Database is not configured') ||
-      message.includes('Document storage is not configured')
-    ) {
-      return { status: 503, body: { error: 'Portal storage is not configured yet' } }
-    }
-    throw error
+    const message = error instanceof Error ? error.message : 'SharePoint storage failed'
+    return { status: 503, body: { error: message } }
   }
 
   return { status: 403, body: { error: 'This account is not assigned to the portal' } }

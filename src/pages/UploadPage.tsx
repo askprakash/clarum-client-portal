@@ -85,8 +85,8 @@ export function UploadPage() {
           <p className="eyebrow">Secure transfer</p>
           <h1>Upload documents</h1>
           <p className="lede">
-            Send supporting files to your CLARUM engagement team. Files are stored
-            only after the portal verifies your sign-in.
+            Send supporting files to your CLARUM engagement team. Client uploads go to
+            your Client Uploads folder in SharePoint after the portal verifies your sign-in.
           </p>
         </div>
       </div>

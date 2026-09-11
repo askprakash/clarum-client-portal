@@ -1,6 +1,13 @@
 export type AppView = 'clients' | 'staff' | 'dashboard' | 'documents' | 'upload' | 'profile'
 
 export type DocumentCategory =
+  | 'Permanent'
+  | 'Accounting'
+  | 'Tax'
+  | 'Advisory'
+  | 'Workpapers'
+  | 'Client Shared'
+  | 'Client Uploads'
   | 'Tax Returns'
   | 'Organizers'
   | 'Financial Statements'

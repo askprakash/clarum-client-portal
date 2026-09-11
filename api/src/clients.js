@@ -1,4 +1,5 @@
 import { createLocalAccount, setAccountEnabled } from './graph.js'
+import { ensureClientLibrary } from './sharepoint.js'
 import { readState, updateState } from './store.js'
 
 function mapClient(row) {
@@ -17,15 +18,19 @@ function mapClient(row) {
   }
 }
 
-export async function getActiveClientByOid(oid) {
+export async function getClientRecord(oid) {
   const { state } = await readState()
-  const row = state.clients.find((client) => client.oid === oid && client.status === 'active')
-  return row ? mapClient(row) : null
+  return state.clients.find((client) => client.oid === oid) || null
+}
+
+export async function getActiveClientByOid(oid) {
+  const row = await getClientRecord(oid)
+  if (!row || row.status !== 'active') return null
+  return mapClient(row)
 }
 
 export async function getClientByOid(oid) {
-  const { state } = await readState()
-  const row = state.clients.find((client) => client.oid === oid)
+  const row = await getClientRecord(oid)
   return row ? mapClient(row) : null
 }
 
@@ -34,6 +39,18 @@ export async function listClients() {
   return [...state.clients]
     .sort((a, b) => a.organization.localeCompare(b.organization))
     .map(mapClient)
+}
+
+export async function saveClientLibrary(oid, library) {
+  await updateState((current) => {
+    const row = current.clients.find((client) => client.oid === oid)
+    if (row) {
+      row.folderId = library.folderId
+      row.folderName = library.folderName
+      row.updatedAt = new Date().toISOString()
+    }
+    return current
+  })
 }
 
 export async function createClient({
@@ -74,12 +91,16 @@ export async function createClient({
       engagements: [],
       clientSince: now.slice(0, 10),
       status: 'active',
+      folderId: '',
+      folderName: '',
       createdAt: now,
       updatedAt: now,
     })
     return current
   })
 
+  const library = await ensureClientLibrary({ oid, organization })
+  await saveClientLibrary(oid, library)
   return { client: await getClientByOid(oid), temporaryPassword }
 }
 

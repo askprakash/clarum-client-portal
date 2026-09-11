@@ -215,7 +215,7 @@ export function ClientsPage({ onOpenClient }: ClientsPageProps) {
               <dd>{credentials.temporaryPassword}</dd>
             </div>
           </dl>
-          <p className="muted">They will be asked to set a new password the first time they sign in.</p>
+          <p className="muted">Keep these sign-in details secure.</p>
         </Modal>
       )}
     </section>
