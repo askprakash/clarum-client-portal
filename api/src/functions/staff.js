@@ -8,7 +8,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 app.http('staffList', {
   methods: ['GET'],
   authLevel: 'anonymous',
-  route: 'admin/staff',
+  route: 'firm/staff',
   handler: async (request) => {
     const auth = await authorizePortal(request)
     if (auth.status) return json(auth.status, auth.body)
@@ -22,7 +22,7 @@ app.http('staffList', {
 app.http('staffCreate', {
   methods: ['POST'],
   authLevel: 'anonymous',
-  route: 'admin/staff',
+  route: 'firm/staff',
   handler: async (request) => {
     const auth = await authorizePortal(request)
     if (auth.status) return json(auth.status, auth.body)
@@ -62,7 +62,7 @@ app.http('staffCreate', {
 app.http('staffStatus', {
   methods: ['PATCH'],
   authLevel: 'anonymous',
-  route: 'admin/staff/{oid}',
+  route: 'firm/staff/{oid}',
   handler: async (request) => {
     const auth = await authorizePortal(request)
     if (auth.status) return json(auth.status, auth.body)

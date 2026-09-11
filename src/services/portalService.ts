@@ -121,7 +121,7 @@ export const portalService = {
 
   async createClient(input: NewClientInput): Promise<ProvisionedAccount> {
     const body = await authorizedJsonFetch<{ temporaryPassword: string }>(
-      '/api/admin/clients',
+      '/api/firm/clients',
       'POST',
       input,
       { graph: true },
@@ -130,17 +130,17 @@ export const portalService = {
   },
 
   async setClientStatus(oid: string, status: 'active' | 'disabled'): Promise<void> {
-    await authorizedJsonFetch('/api/admin/clients/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
+    await authorizedJsonFetch('/api/firm/clients/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
   },
 
   async listStaff(): Promise<StaffMember[]> {
-    const body = await authorizedJsonFetch<{ staff: StaffMember[] }>('/api/admin/staff', 'GET')
+    const body = await authorizedJsonFetch<{ staff: StaffMember[] }>('/api/firm/staff', 'GET')
     return body.staff
   },
 
   async createStaff(input: NewStaffInput): Promise<ProvisionedAccount> {
     const body = await authorizedJsonFetch<{ temporaryPassword: string }>(
-      '/api/admin/staff',
+      '/api/firm/staff',
       'POST',
       input,
       { graph: true },
@@ -149,7 +149,7 @@ export const portalService = {
   },
 
   async setStaffStatus(oid: string, status: 'active' | 'disabled'): Promise<void> {
-    await authorizedJsonFetch('/api/admin/staff/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
+    await authorizedJsonFetch('/api/firm/staff/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
   },
 
   async listDocuments(): Promise<ClientDocument[]> {
