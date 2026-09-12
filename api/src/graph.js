@@ -45,6 +45,13 @@ async function getAppGraphToken() {
 }
 
 async function resolveGraphToken(graphToken) {
+  // Account provisioning requires application permission. A delegated token can
+  // authenticate the portal user but may not have a directory role that permits
+  // creating users, even when the app registration has User.ReadWrite.All.
+  // Prefer the confidential app token whenever its credentials are configured.
+  if (process.env.CIAM_GRAPH_CLIENT_ID && process.env.CIAM_GRAPH_CLIENT_SECRET) {
+    return getAppGraphToken()
+  }
   if (typeof graphToken === 'string' && graphToken.length > 20) return graphToken
   return getAppGraphToken()
 }
