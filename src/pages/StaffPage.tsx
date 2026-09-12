@@ -108,7 +108,7 @@ export function StaffPage() {
               )}
               {staff.map((member) => (
                 <tr key={member.id}>
-                  <td data-label="Name">{member.displayName}</td>
+                  <td data-label="Name"><span className="person-cell"><span className="role-icon role-icon--staff" aria-hidden="true">✦</span><span>{member.displayName}</span></span></td>
                   <td data-label="Email">{member.email}</td>
                   <td data-label="Status">{member.status === 'disabled' ? 'Disabled' : 'Active'}</td>
                   <td data-label="Actions" className="data-table__actions">

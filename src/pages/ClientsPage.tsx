@@ -128,8 +128,9 @@ export function ClientsPage({ onOpenClient }: ClientsPageProps) {
               {clients.map((client) => (
                 <tr key={client.id}>
                   <td data-label="Client">
-                    <button type="button" className="text-link" onClick={() => onOpenClient(client)}>
-                      {client.organization}
+                    <button type="button" className="text-link person-cell" onClick={() => onOpenClient(client)}>
+                      <span className="role-icon role-icon--client" aria-hidden="true">⌂</span>
+                      <span>{client.organization}</span>
                     </button>
                   </td>
                   <td data-label="Email">{client.email}</td>

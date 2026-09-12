@@ -128,6 +128,10 @@ p {
 .topbar__icon span { position: absolute; top: -2px; right: -4px; background: #e33c54; color: #fff; font-size: .55rem; border-radius: 50%; width: 14px; height: 14px; }
 .topbar__chevron { font-size: 1.2rem; color: var(--muted); }
 .avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: .82rem; }
+.person-cell { display: inline-flex; align-items: center; gap: 10px; }
+.role-icon { width: 34px; height: 34px; display: inline-grid; place-items: center; border-radius: 9px; font-size: 1.2rem; font-weight: 700; flex: 0 0 auto; }
+.role-icon--client { color: #146cc5; background: #e6f1ff; }
+.role-icon--staff { color: #6d48c7; background: #f0eaff; }
 
 .brand {
   display: flex;
