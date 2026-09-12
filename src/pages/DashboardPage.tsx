@@ -54,8 +54,6 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         {[
           ['▤', 'View Projects', 'Check project status and milestones', 'dashboard'],
           ['▧', 'Access Documents', 'View and download important files', 'documents'],
-          ['▣', 'Manage Invoices', 'View billing and make payments', 'documents'],
-          ['☏', 'Send a Message', 'Get in touch with our team', 'profile'],
         ].map(([icon, title, detail, target]) => <button type="button" className="quick-card" key={title} onClick={() => onNavigate(target as AppView)}><span className="quick-card__icon">{icon}</span><strong>{title}</strong><span>{detail}</span><b>→</b></button>)}
       </div>
       <div className="dashboard-grid dashboard-grid--portal">
