@@ -10,21 +10,29 @@ export function DocumentsPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
+  function loadDocuments() {
+    setLoading(true)
+    setError('')
+    portalService.listDocuments()
+      .then((items) => setDocuments(items))
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Documents could not be loaded.'))
+      .finally(() => setLoading(false))
+  }
+
   useEffect(() => {
     let cancelled = false
-    portalService
-      .listDocuments()
-      .then((items) => {
-        if (!cancelled) setDocuments(items)
-      })
-      .catch((reason: unknown) => {
-        if (!cancelled) setError(reason instanceof Error ? reason.message : 'Documents could not be loaded.')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    const timeout = window.setTimeout(() => {
+      if (!cancelled) {
+        setLoading(false)
+        setError('SharePoint is taking too long to respond. Please try again.')
+      }
+    }, 20000)
+    portalService.listDocuments().then((items) => { if (!cancelled) setDocuments(items) }).catch((reason: unknown) => {
+      if (!cancelled) setError(reason instanceof Error ? reason.message : 'Documents could not be loaded.')
+    }).finally(() => { window.clearTimeout(timeout); if (!cancelled) setLoading(false) })
     return () => {
       cancelled = true
+      window.clearTimeout(timeout)
     }
   }, [])
 
@@ -50,7 +58,7 @@ export function DocumentsPage() {
         </div>
       </div>
 
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert">{error} <button type="button" className="text-link" onClick={loadDocuments}>Try again</button></p>}
 
       <article className="card">
         <div className="card__header card__header--wrap">
