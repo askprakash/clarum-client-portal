@@ -26,6 +26,7 @@ export function ClientsPage({ onOpenClient }: ClientsPageProps) {
   const [formError, setFormError] = useState('')
   const [credentials, setCredentials] = useState<ProvisionedAccount | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<ClientProfile | null>(null)
 
   function load() {
     setLoading(true)
@@ -68,6 +69,23 @@ export function ClientsPage({ onOpenClient }: ClientsPageProps) {
     } finally {
       setBusyId(null)
     }
+  }
+
+  async function handleEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!editing) return
+    setBusyId(editing.id)
+    try {
+      const updated = await portalService.updateClient(editing.id, {
+        organization: editing.organization, fullName: editing.fullName, email: editing.email,
+        phone: editing.phone === 'Not provided' ? '' : editing.phone,
+        mailingAddress: editing.mailingAddress === 'Not provided' ? '' : editing.mailingAddress,
+        preferredContact: editing.preferredContact,
+      })
+      setClients((current) => current.map((item) => item.id === updated.id ? updated : item))
+      setEditing(null)
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not update the client.') }
+    finally { setBusyId(null) }
   }
 
   return (
@@ -125,6 +143,7 @@ export function ClientsPage({ onOpenClient }: ClientsPageProps) {
                     >
                       {client.status === 'disabled' ? 'Activate' : 'Deactivate'}
                     </button>
+                    <button type="button" className="btn btn--ghost" onClick={() => setEditing({ ...client })}>Edit</button>
                   </td>
                 </tr>
               ))}
@@ -191,6 +210,19 @@ export function ClientsPage({ onOpenClient }: ClientsPageProps) {
                 {saving ? 'Creating…' : 'Create client account'}
               </button>
             </div>
+          </form>
+        </Modal>
+      )}
+
+      {editing && (
+        <Modal title="Edit client" onClose={() => setEditing(null)}>
+          <form className="upload-form" onSubmit={(event) => void handleEdit(event)}>
+            <label className="field"><span>Organization</span><input required value={editing.organization} onChange={(event) => setEditing({ ...editing, organization: event.target.value })} /></label>
+            <label className="field"><span>Contact name</span><input required value={editing.fullName} onChange={(event) => setEditing({ ...editing, fullName: event.target.value })} /></label>
+            <label className="field"><span>Email (cannot be changed)</span><input value={editing.email} disabled /></label>
+            <label className="field"><span>Phone</span><input value={editing.phone === 'Not provided' ? '' : editing.phone} onChange={(event) => setEditing({ ...editing, phone: event.target.value })} /></label>
+            <label className="field"><span>Mailing address</span><textarea rows={2} value={editing.mailingAddress === 'Not provided' ? '' : editing.mailingAddress} onChange={(event) => setEditing({ ...editing, mailingAddress: event.target.value })} /></label>
+            <div className="form-actions"><button type="submit" className="btn btn--primary" disabled={busyId === editing.id}>Save changes</button></div>
           </form>
         </Modal>
       )}

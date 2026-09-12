@@ -1,6 +1,6 @@
 import { app } from '@azure/functions'
 import { authorizePortal, json } from '../auth.js'
-import { createClient, setClientStatus } from '../clients.js'
+import { createClient, setClientStatus, updateClient } from '../clients.js'
 import { graphTokenFromRequest } from '../graph.js'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -76,6 +76,31 @@ app.http('adminClientsStatus', {
       const client = await setClientStatus(request.params.oid, status, graphTokenFromRequest(request, body))
       if (!client) return json(404, { error: 'Client not found' })
       return json(200, { client })
+    } catch (error) {
+      return json(400, { error: error instanceof Error ? error.message : 'Could not update the client' })
+    }
+  },
+})
+
+app.http('adminClientsUpdate', {
+  methods: ['PATCH'],
+  authLevel: 'anonymous',
+  route: 'firm/clients/{oid}/profile',
+  handler: async (request) => {
+    const auth = await authorizePortal(request)
+    if (auth.status) return json(auth.status, auth.body)
+    if (auth.role !== 'admin') return json(403, { error: 'Administrator sign-in is required' })
+    let body
+    try { body = await request.json() } catch { return json(400, { error: 'Invalid request body' }) }
+    const organization = String(body.organization || '').trim()
+    const fullName = String(body.fullName || '').trim()
+    if (!organization || !fullName) return json(400, { error: 'Organization and contact name are required' })
+    try {
+      const client = await updateClient(request.params.oid, {
+        organization, fullName, phone: body.phone, mailingAddress: body.mailingAddress,
+        preferredContact: body.preferredContact,
+      })
+      return client ? json(200, { client }) : json(404, { error: 'Client not found' })
     } catch (error) {
       return json(400, { error: error instanceof Error ? error.message : 'Could not update the client' })
     }

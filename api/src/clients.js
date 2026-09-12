@@ -119,3 +119,21 @@ export async function setClientStatus(oid, status, graphToken) {
   })
   return getClientByOid(oid)
 }
+
+export async function updateClient(oid, updates) {
+  const existing = await getClientByOid(oid)
+  if (!existing) return null
+  await updateState((current) => {
+    const row = current.clients.find((client) => client.oid === oid)
+    if (row) {
+      if (updates.organization) row.organization = updates.organization
+      if (updates.fullName) row.fullName = updates.fullName
+      if (updates.phone !== undefined) row.phone = updates.phone || 'Not provided'
+      if (updates.mailingAddress !== undefined) row.mailingAddress = updates.mailingAddress || 'Not provided'
+      if (updates.preferredContact) row.preferredContact = updates.preferredContact === 'Phone' ? 'Phone' : 'Email'
+      row.updatedAt = new Date().toISOString()
+    }
+    return current
+  })
+  return getClientByOid(oid)
+}

@@ -120,6 +120,14 @@ export const portalService = {
     await authorizedJsonFetch('/api/firm/clients/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
   },
 
+  async updateClient(oid: string, input: NewClientInput): Promise<ClientProfile> {
+    const body = await authorizedJsonFetch<{ client: ClientProfile }>(
+      '/api/firm/clients/' + encodeURIComponent(oid) + '/profile', 'PATCH', input,
+    )
+    cachedClients = cachedClients.map((client) => client.id === oid ? body.client : client)
+    return body.client
+  },
+
   async listStaff(): Promise<StaffMember[]> {
     const body = await authorizedJsonFetch<{ staff: StaffMember[] }>('/api/firm/staff', 'GET')
     return body.staff
