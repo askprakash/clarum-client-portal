@@ -1,8 +1,9 @@
 import { useState, type ChangeEvent, type DragEvent, type FormEvent } from 'react'
+import { isAdminAccount } from '../auth'
 import { portalService } from '../services/portalService'
 import type { DocumentCategory } from '../types'
 
-const uploadCategories: Array<DocumentCategory | 'Other'> = [
+const uploadFolders: Array<DocumentCategory | 'Other'> = [
   'Tax Returns',
   'Organizers',
   'Financial Statements',
@@ -18,7 +19,8 @@ type SelectedFile = {
 
 export function UploadPage() {
   const client = portalService.getCurrentClient()
-  const [category, setCategory] = useState<(typeof uploadCategories)[number]>('Correspondence')
+  const [category, setCategory] = useState<(typeof uploadFolders)[number]>('Client Shared')
+  const [customFolders, setCustomFolders] = useState<string[]>([])
   const [notes, setNotes] = useState('')
   const [files, setFiles] = useState<SelectedFile[]>([])
   const [isDragging, setIsDragging] = useState(false)
@@ -78,6 +80,18 @@ export function UploadPage() {
     }
   }
 
+  async function createFolder() {
+    const name = window.prompt('New folder name')?.trim()
+    if (!name) return
+    try {
+      await portalService.createFolder(isAdminAccount() ? 'Client Shared' : 'Client Uploads', name)
+      setCustomFolders((current) => [...new Set([...current, name])])
+      setCategory(name as typeof category)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Folder could not be created.')
+    }
+  }
+
   return (
     <section className="page">
       <div className="page-header">
@@ -101,14 +115,15 @@ export function UploadPage() {
       <article className="card card--narrow">
         <form className="upload-form" onSubmit={(event) => void onSubmit(event)}>
           <label className="field">
-            <span>Category</span>
+            <span>Folder</span>
             <select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>
-              {uploadCategories.map((item) => (
+              {[...uploadFolders, ...customFolders].map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
               ))}
             </select>
+            <button type="button" className="text-link" onClick={() => void createFolder()}>Create new folder</button>
           </label>
 
           <label className="field">

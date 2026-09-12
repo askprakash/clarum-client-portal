@@ -183,6 +183,17 @@ async function getFolderChild(clientFolderId, folderName) {
   return child
 }
 
+async function findFolderRecursive(parentId, folderName) {
+  const children = await listChildren(parentId)
+  for (const child of children) {
+    if (!child.folder) continue
+    if (child.name === folderName) return child
+    const nested = await findFolderRecursive(child.id, folderName)
+    if (nested) return nested
+  }
+  return null
+}
+
 export async function createClientSubfolder(client, role, parentName, name) {
   if (!canRoleWriteFolder(role, parentName)) throw new Error('You cannot create folders in that area')
   const library = await ensureClientLibrary(client, false)
@@ -253,12 +264,15 @@ export async function downloadAuthorizedDocument(client, role, itemId) {
 }
 
 export async function uploadAuthorizedDocument(client, role, { fileName, buffer, contentType, category }) {
-  const folderName = folderForUpload(role, category)
-  if (!canRoleWriteFolder(role, folderName)) {
+  const folderName = role === 'admin' ? sanitizeSharePointName(category, 'Workpapers') : folderForUpload(role, category)
+  if (role !== 'admin' && !canRoleWriteFolder(role, folderName)) {
     throw new Error('You cannot upload to that folder')
   }
   const library = await ensureClientLibrary(client)
-  const folder = await getFolderChild(library.folderId, folderName)
+  const folder = role === 'admin' && !CLIENT_LIBRARY_FOLDERS.includes(folderName)
+    ? await findFolderRecursive(library.folderId, folderName)
+    : await getFolderChild(library.folderId, folderName)
+  if (!folder) throw new Error('The selected SharePoint folder is missing')
   const safeName = sanitizeSharePointName(fileName)
   const item = await uploadToFolder(folder.id, safeName, buffer, contentType)
   return mapDocument(item, folderName, role)
