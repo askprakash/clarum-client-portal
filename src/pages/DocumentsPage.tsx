@@ -58,6 +58,7 @@ export function DocumentsPage({ onUpload }: { onUpload?: () => void }) {
     const found = [...new Set(documents.map((doc) => doc.category))]
     return ['All', ...found]
   }, [documents])
+  const folders = categoryOptions.filter((item) => item !== 'All')
 
   return (
     <section className="page">
@@ -82,9 +83,9 @@ export function DocumentsPage({ onUpload }: { onUpload?: () => void }) {
 
       <article className="card">
         <div className="card__header card__header--wrap">
-          <h2>All documents</h2>
+          <h2>{category === 'All' ? 'Folders' : category}</h2>
           <label className="filter">
-            <span>Category</span>
+            <span>Folder</span>
             <select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}>
               {categoryOptions.map((item) => (
                 <option key={item} value={item}>
@@ -94,6 +95,16 @@ export function DocumentsPage({ onUpload }: { onUpload?: () => void }) {
             </select>
           </label>
         </div>
+        {category === 'All' && !loading && folders.length > 0 && (
+          <div className="quick-actions" aria-label="Document folders">
+            {folders.map((folder) => (
+              <button key={folder} type="button" className="quick-action" onClick={() => setCategory(folder as DocumentCategory)}>
+                <strong>▱ {folder}</strong>
+                <span>{documents.filter((doc) => doc.category === folder).length} files</span>
+              </button>
+            ))}
+          </div>
+        )}
         {loading ? (
           <p className="empty-state">Loading documents…</p>
         ) : (
