@@ -180,6 +180,14 @@ export const portalService = {
     return (await response.json()) as { document: ClientDocument }
   },
 
+  async createFolder(parent: string, name: string) {
+    const response = await authorizedFetch('/api/documents/folders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parent, name }),
+    })
+    return (await response.json()) as { folder: { id: string; name: string } }
+  },
+
   async openDocument(document: ClientDocument, download = false) {
     const token = await getApiToken()
     const response = await fetch(documentsPath({ id: document.id, ...(download ? { download: '1' } : {}) }), {

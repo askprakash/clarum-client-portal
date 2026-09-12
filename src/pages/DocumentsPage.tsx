@@ -9,6 +9,20 @@ export function DocumentsPage({ onUpload }: { onUpload?: () => void }) {
   const [documents, setDocuments] = useState<ClientDocument[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [folderMessage, setFolderMessage] = useState('')
+
+  async function createFolder() {
+    const parent = window.prompt('Create inside which folder? (For example: Client Shared)')
+    if (!parent) return
+    const name = window.prompt('New folder name')
+    if (!name) return
+    try {
+      await portalService.createFolder(parent, name)
+      setFolderMessage(`Folder “${name}” was created in ${parent}.`)
+    } catch (reason) {
+      setFolderMessage(reason instanceof Error ? reason.message : 'Folder could not be created.')
+    }
+  }
 
   function loadDocuments() {
     setLoading(true)
@@ -56,8 +70,13 @@ export function DocumentsPage({ onUpload }: { onUpload?: () => void }) {
             workpapers are not shown in the client portal.
           </p>
         </div>
-        {onUpload && <button type="button" className="btn btn--primary" onClick={onUpload}>Upload document</button>}
+        <div className="form-actions">
+          {onUpload && <button type="button" className="btn btn--primary" onClick={onUpload}>Upload document</button>}
+          <button type="button" className="btn btn--ghost" onClick={() => void createFolder()}>New folder</button>
+        </div>
       </div>
+
+      {folderMessage && <p role="status">{folderMessage}</p>}
 
       {error && <p role="alert">{error} <button type="button" className="text-link" onClick={loadDocuments}>Try again</button></p>}
 

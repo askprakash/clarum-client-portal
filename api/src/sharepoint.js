@@ -183,6 +183,17 @@ async function getFolderChild(clientFolderId, folderName) {
   return child
 }
 
+export async function createClientSubfolder(client, role, parentName, name) {
+  if (!canRoleWriteFolder(role, parentName)) throw new Error('You cannot create folders in that area')
+  const library = await ensureClientLibrary(client, false)
+  const parent = await getFolderChild(library.folderId, parentName)
+  const safeName = sanitizeSharePointName(name, '')
+  if (!safeName) throw new Error('Enter a folder name')
+  const existing = await getChild(parent.id, safeName)
+  if (existing) return existing
+  return createFolder(parent.id, safeName)
+}
+
 function mapDocument(item, folderName, role) {
   const name = item.name || 'document'
   const uploadedAt = item.lastModifiedDateTime || item.createdDateTime || new Date().toISOString()
@@ -206,11 +217,14 @@ export async function listDocumentsForClient(client, role) {
   for (const folder of folders) {
     if (!folder.folder) continue
     if (!canAccessItem(role, folder, library.folderId, library.folderName)) continue
-    const files = await listChildren(folder.id)
-    for (const file of files) {
-      if (file.folder) continue
-      documents.push(mapDocument(file, folder.name, role))
+    async function collect(parentId, category) {
+      const files = await listChildren(parentId)
+      for (const file of files) {
+        if (file.folder) await collect(file.id, category)
+        else documents.push(mapDocument(file, category, role))
+      }
     }
+    await collect(folder.id, folder.name)
   }
   return documents.sort((a, b) => b.date.localeCompare(a.date))
 }

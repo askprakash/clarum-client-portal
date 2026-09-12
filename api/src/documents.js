@@ -4,6 +4,7 @@ import {
   getAuthorizedDocument,
   listDocumentsForClient as listSharePointDocuments,
   uploadAuthorizedDocument,
+  createClientSubfolder,
 } from './sharepoint.js'
 import { getClientRecord, saveClientLibrary } from './clients.js'
 
@@ -39,4 +40,10 @@ export async function uploadDocument(clientOid, role, file) {
   const client = await libraryFor(clientOid)
   if (!client) throw new Error('Choose a client')
   return uploadAuthorizedDocument(client, role, file)
+}
+
+export async function createFolder(clientOid, role, parentName, name) {
+  const client = await libraryFor(clientOid)
+  if (!client) throw new Error('Choose a client')
+  return createClientSubfolder(client, role, parentName, name)
 }
