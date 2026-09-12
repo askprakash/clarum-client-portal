@@ -59,7 +59,17 @@ async function graph(path, init = {}, options = {}) {
     : `https://graph.microsoft.com/v1.0/sites/${siteId}/drives/${driveId}${path}`
   const headers = new Headers(init.headers)
   headers.set('Authorization', `Bearer ${await getSharePointToken()}`)
-  const response = await fetch(url, { ...init, headers })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 12_000)
+  let response
+  try {
+    response = await fetch(url, { ...init, headers, signal: controller.signal })
+  } catch (error) {
+    if (error?.name === 'AbortError') throw new Error('SharePoint request timed out')
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
   if (response.status === 404 && (!init.method || init.method === 'GET')) return { status: 404, json: null, etag: undefined }
   if (!response.ok) {
     const detail = await response.text().catch(() => '')
@@ -144,7 +154,7 @@ export async function ensureRootFolder(name) {
   return createFolder(root.json.id, name)
 }
 
-export async function ensureClientLibrary({ oid, organization, folderId, folderName }) {
+export async function ensureClientLibrary({ oid, organization, folderId, folderName }, createStandardFolders = true) {
   const expectedName = folderName || clientFolderName(organization, oid)
   let folder = null
   if (folderId) {
@@ -158,9 +168,11 @@ export async function ensureClientLibrary({ oid, organization, folderId, folderN
     const root = await graph('/root')
     folder = await createFolder(root.json.id, expectedName)
   }
-  for (const name of CLIENT_LIBRARY_FOLDERS) {
-    const child = await getChild(folder.id, name)
-    if (!child) await createFolder(folder.id, name)
+  if (createStandardFolders) {
+    for (const name of CLIENT_LIBRARY_FOLDERS) {
+      const child = await getChild(folder.id, name)
+      if (!child) await createFolder(folder.id, name)
+    }
   }
   return { folderId: folder.id, folderName: folder.name }
 }
@@ -188,7 +200,7 @@ function mapDocument(item, folderName, role) {
 }
 
 export async function listDocumentsForClient(client, role) {
-  const library = await ensureClientLibrary(client)
+  const library = await ensureClientLibrary(client, false)
   const folders = await listChildren(library.folderId)
   const documents = []
   for (const folder of folders) {
