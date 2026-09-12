@@ -1,7 +1,7 @@
 import { app } from '@azure/functions'
 import { authorizePortal, json } from '../auth.js'
 import { graphTokenFromRequest } from '../graph.js'
-import { countActiveStaff, createStaff, listStaff, setStaffStatus } from '../staff.js'
+import { countActiveStaff, createStaff, listStaff, setStaffStatus, updateStaff } from '../staff.js'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -99,5 +99,20 @@ app.http('staffStatus', {
     } catch (error) {
       return json(400, { error: error instanceof Error ? error.message : 'Could not update the staff account' })
     }
+  },
+})
+
+app.http('staffUpdate', {
+  methods: ['PATCH'], authLevel: 'anonymous', route: 'firm/staff/{oid}/profile',
+  handler: async (request) => {
+    const auth = await authorizePortal(request)
+    if (auth.status) return json(auth.status, auth.body)
+    if (auth.role !== 'admin') return json(403, { error: 'Administrator sign-in is required' })
+    let body
+    try { body = await request.json() } catch { return json(400, { error: 'Invalid request body' }) }
+    const displayName = String(body.displayName || '').trim()
+    if (!displayName) return json(400, { error: 'Name is required' })
+    const updated = await updateStaff(request.params.oid, displayName)
+    return updated ? json(200, { staff: updated }) : json(404, { error: 'Staff account not found' })
   },
 })

@@ -85,6 +85,17 @@ export async function setStaffStatus(oid, status, graphToken) {
   return getStaffByOid(oid)
 }
 
+export async function updateStaff(oid, displayName) {
+  const existing = await getStaffByOid(oid)
+  if (!existing) return null
+  await updateState((current) => {
+    const row = current.staff.find((member) => member.oid === oid)
+    if (row) { row.displayName = displayName; row.updatedAt = new Date().toISOString() }
+    return current
+  })
+  return getStaffByOid(oid)
+}
+
 export async function bootstrapFirstAdmin({ oid, emails, displayName }) {
   const { state } = await readState()
   if (state.staff.length > 0) return null

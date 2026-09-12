@@ -147,6 +147,13 @@ export const portalService = {
     await authorizedJsonFetch('/api/firm/staff/' + encodeURIComponent(oid), 'PATCH', { status }, { graph: true })
   },
 
+  async updateStaff(oid: string, displayName: string): Promise<StaffMember> {
+    const body = await authorizedJsonFetch<{ staff: StaffMember }>(
+      '/api/firm/staff/' + encodeURIComponent(oid) + '/profile', 'PATCH', { displayName },
+    )
+    return body.staff
+  },
+
   async listDocuments(): Promise<ClientDocument[]> {
     const response = await authorizedFetch(documentsPath())
     const body = (await response.json()) as { documents: ClientDocument[] }
