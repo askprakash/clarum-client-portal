@@ -3,7 +3,7 @@ import { DocumentTable } from '../components/DocumentTable'
 import { portalService } from '../services/portalService'
 import type { ClientDocument, DocumentCategory } from '../types'
 
-export function DocumentsPage() {
+export function DocumentsPage({ onUpload }: { onUpload?: () => void }) {
   const client = portalService.getCurrentClient()
   const [category, setCategory] = useState<DocumentCategory | 'All'>('All')
   const [documents, setDocuments] = useState<ClientDocument[]>([])
@@ -56,6 +56,7 @@ export function DocumentsPage() {
             workpapers are not shown in the client portal.
           </p>
         </div>
+        {onUpload && <button type="button" className="btn btn--primary" onClick={onUpload}>Upload document</button>}
       </div>
 
       {error && <p role="alert">{error} <button type="button" className="text-link" onClick={loadDocuments}>Try again</button></p>}

@@ -57,7 +57,7 @@ function ClientWorkspace({
         onSignOut={onSignOut}
       >
         {view === 'dashboard' && <DashboardPage onNavigate={onNavigate} />}
-        {view === 'documents' && <DocumentsPage />}
+        {view === 'documents' && <DocumentsPage onUpload={() => onNavigate('upload')} />}
         {view === 'upload' && <UploadPage />}
         {view === 'profile' && <ProfilePage />}
       </AppLayout>
