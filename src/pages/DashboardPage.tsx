@@ -37,24 +37,29 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
   return (
     <section className="page">
-      <div className="welcome">
-        <div>
-          <p className="eyebrow">Dashboard</p>
-          <h1>Welcome, {client.organization}</h1>
-          <p className="lede">
-            Review recent files, complete items that need your attention, and send
-            documents to CLARUM when you are ready.
-          </p>
+      <div className="hero-panel">
+        <div className="hero-panel__copy">
+          <p className="eyebrow">Welcome back, {client.fullName.split(' ')[0]}</p>
+          <h1>Your Client Portal</h1>
+          <p className="hero-panel__subtitle">Everything you need, all in one place.</p>
+          <p className="lede">Track progress, access documents, manage invoices and stay connected with our team.</p>
         </div>
-        <button type="button" className="btn btn--primary" onClick={() => onNavigate('upload')}>
-          Quick Upload
-        </button>
+        <div className="hero-panel__art"><img src="/clarum-login-hero.jpg" alt="" /></div>
+        <div className="hero-panel__quote">Great<br />Partnerships<br />Build Brighter<br />Futures<span /></div>
       </div>
 
       {error && <p role="alert">{error}</p>}
 
-      <div className="dashboard-grid">
-        <article className="card card--span-2">
+      <div className="quick-actions">
+        {[
+          ['▤', 'View Projects', 'Check project status and milestones', 'dashboard'],
+          ['▧', 'Access Documents', 'View and download important files', 'documents'],
+          ['▣', 'Manage Invoices', 'View billing and make payments', 'documents'],
+          ['☏', 'Send a Message', 'Get in touch with our team', 'profile'],
+        ].map(([icon, title, detail, target]) => <button type="button" className="quick-card" key={title} onClick={() => onNavigate(target as AppView)}><span className="quick-card__icon">{icon}</span><strong>{title}</strong><span>{detail}</span><b>→</b></button>)}
+      </div>
+      <div className="dashboard-grid dashboard-grid--portal">
+        <article className="card">
           <div className="card__header">
             <h2>Recent documents</h2>
             <button type="button" className="text-link" onClick={() => onNavigate('documents')}>
@@ -91,6 +96,11 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             <h2>Recent activity</h2>
           </div>
           <ActivityFeed items={activity} />
+        </article>
+        <article className="card">
+          <div className="card__header"><h2>Need help?</h2><button type="button" className="text-link">Contact support</button></div>
+          <p className="lede">Our team is here to support you. Send us a message and we’ll get back to you shortly.</p>
+          <button type="button" className="btn btn--primary" onClick={() => onNavigate('profile')}>Contact support&nbsp; →</button>
         </article>
       </div>
     </section>

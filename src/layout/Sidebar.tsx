@@ -6,7 +6,7 @@ type NavItem = {
 }
 
 const clientNavItems: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'dashboard', label: 'Home' },
   { id: 'documents', label: 'Documents' },
   { id: 'upload', label: 'Upload Documents' },
   { id: 'profile', label: 'Profile' },
@@ -55,13 +55,14 @@ export function Sidebar({
             aria-current={item.id === currentView ? 'page' : undefined}
             onClick={() => handleNavigate(item.id)}
           >
-            {item.label}
+            <span className="nav-link__icon" aria-hidden="true">{item.id === 'dashboard' ? '⌂' : item.id === 'documents' ? '▤' : item.id === 'upload' ? '↥' : '◎'}</span>
+            <span>{item.label}</span>
           </button>
         ))}
       </nav>
       <div className="sidebar__footer">
         <button type="button" className="nav-link nav-link--muted" onClick={onSignOut}>
-          Sign Out
+          <span className="nav-link__icon" aria-hidden="true">↪</span><span>Log out</span>
         </button>
       </div>
     </aside>

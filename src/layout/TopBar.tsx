@@ -9,6 +9,7 @@ type TopBarProps = {
 }
 
 export function TopBar({ client, isAdmin = false, mobileNavOpen, onToggleMobileNav }: TopBarProps) {
+  const initials = client.fullName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   return (
     <header className="topbar">
       <div className="topbar__left">
@@ -26,8 +27,13 @@ export function TopBar({ client, isAdmin = false, mobileNavOpen, onToggleMobileN
         <Logo />
       </div>
       <div className="topbar__right">
-        <p className="topbar__client">{client.fullName}</p>
-        <p className="topbar__org">{isAdmin ? 'Administrator' : client.organization}</p>
+        <button className="topbar__icon" aria-label="Notifications" type="button">♧<span>1</span></button>
+        <div className="avatar">{initials}</div>
+        <div className="topbar__identity">
+          <p className="topbar__client">{client.fullName}</p>
+          <p className="topbar__org">{isAdmin ? 'Administrator' : client.organization}</p>
+        </div>
+        <span className="topbar__chevron">⌄</span>
       </div>
     </header>
   )
